@@ -160,3 +160,5 @@ body.dokun .kontrol.gizli2, .gizli2 { display: none !important; }
 #hizGosterge { position: absolute; left: 50%; bottom: calc(max(10px, env(safe-area-inset-bottom)) + 34px); transform: translateX(-50%); font-family: 'Lilita One', sans-serif; font-size: 22px; color: #ffd84a; background: #000a; padding: 2px 14px; border-radius: 12px; border: 2px solid var(--hr, #ffd84a); transition: transform .1s; white-space: nowrap; }
 #hizGosterge.cok { color: #ff7a3a; transform: translateX(-50%) scale(1.12); }
 body.dokun #hizGosterge { bottom: auto; top: 46%; font-size: 16px; }
+body.firavunum #hizGosterge { bottom: calc(max(10px, env(safe-area-inset-bottom)) + 100px); }
+body.dokun.firavunum #hizGosterge { bottom: auto; }

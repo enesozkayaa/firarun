@@ -170,6 +170,8 @@ const Motor = (() => {
       turBitti('kosucu', 'duello', no);
     } else {
       duelloKapat();
+      // baştan doğma modunda Firavun düelloyu kazanınca canı tazelenir (diğer modda can taşınır)
+      if (M.ayar.dogma === 'bastan') M.firavunCan = CAN;
       olum(hedef, 'duello');
       if (M.bitti) return;
       if (M.kuyruk.length) M.duelloBekle = M.t + 2;

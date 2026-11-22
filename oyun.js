@@ -5,7 +5,7 @@
 // =============================================================
 
 const Oyun = (() => {
-  const SURUM = 15;   // sw.js ONBELLEK numarasıyla aynı tut; oyuncular farklı sürümdeyse uyarı çıkar
+  const SURUM = 16;   // sw.js ONBELLEK numarasıyla aynı tut; oyuncular farklı sürümdeyse uyarı çıkar
   const $ = id => document.getElementById(id);
   const D = Dunya;
   const dokun = matchMedia('(pointer: coarse)').matches;
@@ -176,7 +176,7 @@ const Oyun = (() => {
   function oyunTemizle() {
     if (O) O.govdeler.forEach(c => { Sahne.karakterSil(c.K); Sahne.scene.remove(c.et); Sahne.temizle(c.et); });
     O = null;
-    ['duelloPanel', 'tuzakSerit', 'izlePanel', 'rolYazi', 'nisangah', 'hizGosterge'].forEach(e => $(e).classList.add('gizli'));
+    ['duelloPanel', 'tuzakSerit', 'izlePanel', 'rolYazi', 'nisangah', 'hizGosterge'].forEach(e => $(e).classList.add('gizli')); document.body.classList.remove('firavunum');
     kontrolGoster(false);
     $('akis').innerHTML = ''; $('ipucu').textContent = '';
     if (document.pointerLockElement) document.exitPointerLock?.();
@@ -209,6 +209,7 @@ const Oyun = (() => {
     $('rolYazi').classList.toggle('gizli', !O.ben);
     $('rolYazi').innerHTML = benFiravun ? '🪬 Sen <b>FİRAVUN</b>sun: cam kabinde yürü, koşuculara bak, düğmeye gelince <b>E</b>' : '🏃 Koşucusun: tuzaklardan kaç, sona var!';
     $('tuzakSerit').classList.toggle('gizli', !benFiravun);
+    document.body.classList.toggle('firavunum', benFiravun);
     $('duelloPanel').classList.add('gizli'); $('izlePanel').classList.add('gizli');
     $('turSonu').classList.add('gizli'); ekranGoster('hud');
     kontrolGoster(!!O.ben);
@@ -246,6 +247,7 @@ const Oyun = (() => {
     });
   }
   const hazirMi = id => !O || O.t >= (O.hazirT[id] ?? -1e9);
+  const dolum = id => [Math.max(0, (O.hazirT[id] ?? 0) - O.t), D.dolmaSuresi(D.TUZAKLAR[id], O.ayar.bekleme)];
 
   // ---------- Firavun: tuzak şeridi ----------
   function tuzakSeridiKur() {
@@ -750,7 +752,7 @@ const Oyun = (() => {
         }
       } else if (O.olumYeri) Sahne.kameraTakip(O.olumYeri, kam.yaw, kam.pitch, false, 7);
       else Sahne.menuKamera(performance.now() / 1000);
-      Sahne.tuzakGuncelle(t, O.akt, hazirMi, O.benNo === O.firavun);
+      Sahne.tuzakGuncelle(t, O.akt, hazirMi, O.benNo === O.firavun, dolum);
       // ekran yazıları
       seritT -= dt;
       if (seritT <= 0 && O.faz === 'kosu') {

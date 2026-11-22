@@ -386,9 +386,13 @@ const Sahne = (() => {
       const dm = new T.MeshStandardMaterial({ color: 0x30d060, emissive: 0x30d060, emissiveIntensity: 0.8, roughness: 0.3 });
       const bt = ms(new T.SphereGeometry(0.32, 16, 10, 0, 6.283, 0, Math.PI / 2), dm, 0, 1.06, 0); bt.scale.set(1.15, 0.6, 0.9); grp.add(bt);
       const lbl = etiketYap(tz.em, '#0000', 64); lbl.position.set(0, 2.0, 0); lbl.scale.multiplyScalar(1.3); grp.add(lbl);
-      // galeriden aşağı inen ince işaret çizgisi
+      // dolma sayacı: düğmenin üstünde halka + kalan saniye (yalnız dolarken görünür)
+      const sc = document.createElement('canvas'); sc.width = sc.height = 128;
+      const st = new T.CanvasTexture(sc); st.colorSpace = T.SRGBColorSpace;
+      const sayac = new T.Sprite(new T.SpriteMaterial({ map: st, depthTest: false, transparent: true }));
+      sayac.scale.set(1.1, 1.1, 1); sayac.position.set(0, 3.05, 0); sayac.renderOrder = 11; sayac.visible = false; grp.add(sayac);
       scene.add(grp);
-      return { grp, bt, dm, lbl, tz, hazir: null };
+      return { grp, bt, dm, lbl, tz, hazir: null, sayac, sc, st, sayacKey: '' };
     });
   }
   function anubis() {
@@ -423,7 +427,22 @@ const Sahne = (() => {
   // ---------- Tuzakların her kare güncellenmesi ----------
   const onceki = {};
   const BU = {}, PM = {};
-  function tuzakGuncelle(t, akt, hazirFn, benFiravun) {
+  function sayacCiz(d, kalan, top) {
+    const oran = Math.max(0, Math.min(1, 1 - kalan / top)), sn = Math.ceil(kalan);
+    const key = sn + '|' + Math.round(oran * 48);
+    if (key === d.sayacKey) return;
+    d.sayacKey = key;
+    const g = d.sc.getContext('2d'), m = 64;
+    g.clearRect(0, 0, 128, 128);
+    g.fillStyle = '#000b'; g.beginPath(); g.arc(m, m, 58, 0, 6.283); g.fill();
+    g.lineWidth = 12; g.lineCap = 'round';
+    g.strokeStyle = '#5a1a10'; g.beginPath(); g.arc(m, m, 48, 0, 6.283); g.stroke();
+    g.strokeStyle = oran > 0.8 ? '#ffd84a' : '#ff6a30'; g.beginPath(); g.arc(m, m, 48, -Math.PI / 2, -Math.PI / 2 + oran * 6.283); g.stroke();
+    g.fillStyle = '#fff'; g.font = '900 52px Nunito, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText(String(sn), m, m + 3);
+    d.st.needsUpdate = true;
+  }
+  function tuzakGuncelle(t, akt, hazirFn, benFiravun, dolumFn) {
     const D = Dunya, f = id => D.faz(akt, id, t);
     // başlangıç kapısı
     if (basKapi) basKapi.position.y = t < 0 ? 0 : Math.min(5.5, t * 4);
@@ -467,6 +486,9 @@ const Sahne = (() => {
       if (h !== d.hazir) { d.hazir = h; d.dm.color.setHex(h ? 0x30d060 : 0x8a1a10); d.dm.emissive.setHex(h ? 0x30d060 : 0x5a0a04); }
       d.bt.position.y = 1.06 - (D.faz(akt, d.tz.id, t) < 0.3 ? 0.08 : 0);
       d.lbl.visible = true;
+      const dl = !h && dolumFn ? dolumFn(d.tz.id) : null;
+      d.sayac.visible = !!(dl && dl[0] > 0);
+      if (d.sayac.visible) sayacCiz(d, dl[0], dl[1]);
     });
   }
   function gecis(ad, kosul, fn) { if (kosul && !onceki[ad]) fn(); onceki[ad] = kosul; }
