@@ -60,6 +60,11 @@ const Ses = (() => {
     lazer(k = 1) { ton(880, 2.6, 'sawtooth', 0.05 * k, 820, 0.5); ton(440, 2.6, 'sine', 0.08 * k, 430, 0.5); gurultu(0.4, 0.1 * k, 5000, 'highpass', 0.5); },
     balta(k = 1) { for (let i = 0; i < 8; i++) gurultu(0.3, 0.12 * k, 900, 'bandpass', i * 0.6, 2, 2400, 0.12); ton(150, 0.4, 'square', 0.06 * k, 300); },
     alev(k = 1) { gurultu(0.5, 0.12 * k, 800, 'bandpass', 0, 1, 1600, 0.3); gurultu(2.2, 0.35 * k, 900, 'lowpass', 0.8, 0.7, 500, 0.08); ton(80, 2, 'sawtooth', 0.04 * k, 60, 0.8); },
+    // Deagle: sert patlama + alçak gümbürtü
+    ates(k = 1) { gurultu(0.09, 0.7 * k, 2600, 'lowpass', 0, 0.7); gurultu(0.35, 0.35 * k, 500, 'lowpass', 0.01, 1, 140); ton(90, 0.2, 'sine', 0.35 * k, 40); },
+    bos() { ton(1400, 0.03, 'square', 0.08); },
+    doldur() { ton(600, 0.05, 'square', 0.1); ton(420, 0.05, 'square', 0.1, null, 0.5); ton(900, 0.06, 'square', 0.12, null, 1.3); },
+    isabet(kafa) { ton(kafa ? 1900 : 1300, 0.06, 'triangle', 0.18); },
     salla(k = 1) { gurultu(0.22, 0.18 * k, 700, 'bandpass', 0, 2, 2500, 0.05); },
     vurus(k = 1) { gurultu(0.15, 0.4 * k, 1200, 'lowpass'); ton(140, 0.18, 'square', 0.15 * k, 60); },
     olum(neden, k = 1) {

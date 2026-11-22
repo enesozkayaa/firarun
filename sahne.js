@@ -147,6 +147,7 @@ const Sahne = (() => {
     scene.add(ustIsik); scene.add(ustIsik.target);
     dokular(); malzemeler();
     parcacikKur();
+    elSilahKur();
     haritaKur();
     boyutla();
     addEventListener('resize', boyutla);
@@ -519,10 +520,50 @@ const Sahne = (() => {
     else asa.add(ms(new T.SphereGeometry(0.09, 8, 6), M.altin, 0, 0.75, 0));
     asa.position.set(0.04, -0.02, 0); asa.rotation.z = -1.3;
     P.kolR.alt.add(asa); asa.visible = firavun;
+    // Deagle (düelloda): namlu kolun uzandığı yöne bakar
+    const silah = silahYap(); silah.rotation.z = -Math.PI / 2; silah.position.set(0.02, -0.06, 0); silah.visible = false;
+    P.kolR.alt.add(silah);
     const gl = new T.Mesh(new T.CircleGeometry(0.45, 16).rotateX(-Math.PI / 2), new T.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.3, depthWrite: false })); gl.position.y = 0.02; g.add(gl);
     scene.add(g);
-    return { g, govde, P, asa, firavun, faz: 0, salla: 0, golge: gl };
+    return { g, govde, P, asa, silah, firavun, faz: 0, salla: 0, golge: gl };
   }
+  // Deagle modeli: kendi ekseninde namlu +x, üstü +y
+  let silahMat = null;
+  function silahYap(olcek = 1) {
+    if (!silahMat) silahMat = { govde: new T.MeshStandardMaterial({ color: 0x9aa0a8, metalness: 0.85, roughness: 0.3 }), kabza: new T.MeshStandardMaterial({ color: 0x1e1e22, roughness: 0.7 }), altin: new T.MeshStandardMaterial({ color: 0xd8a830, metalness: 0.9, roughness: 0.3 }) };
+    const g = new T.Group();
+    g.add(ms(kutuGeo(0.36, 0.08, 0.055, 1), silahMat.govde, 0.1, 0.035, 0, true));          // sürgü
+    g.add(ms(kutuGeo(0.3, 0.05, 0.05, 1), silahMat.govde, 0.08, -0.025, 0));                // gövde altı
+    const kabza = ms(kutuGeo(0.075, 0.2, 0.05, 1), silahMat.kabza, -0.03, -0.12, 0, true); kabza.rotation.z = 0.25; g.add(kabza);
+    g.add(ms(kutuGeo(0.02, 0.05, 0.02, 1), silahMat.altin, 0.26, 0.085, 0));                // arpacık
+    const tetik = ms(kutuGeo(0.06, 0.02, 0.02, 1), silahMat.kabza, 0.04, -0.07, 0); g.add(tetik);
+    g.scale.setScalar(olcek);
+    return g;
+  }
+  // birinci şahıs: kameraya bağlı tabanca
+  let elSilahi = null, elTepme = 0;
+  function elSilahKur() {
+    elSilahi = silahYap(1.1); elSilahi.rotation.y = Math.PI / 2; elSilahi.position.set(0.2, -0.2, -0.42); elSilahi.visible = false;
+    elSilahi.traverse(o => { if (o.isMesh) { o.castShadow = false; o.renderOrder = 10; } });
+    camera.add(elSilahi); scene.add(camera);
+  }
+  // mermi izleri ve namlu alevi
+  const izler = [];
+  let namluIsik = null;
+  function iz(o, s) {
+    const geo = new T.BufferGeometry().setFromPoints([new T.Vector3(o[0], o[1], o[2]), new T.Vector3(s[0], s[1], s[2])]);
+    const m = new T.LineBasicMaterial({ color: 0xffe8a0, transparent: true, opacity: 0.9, blending: T.AdditiveBlending, depthWrite: false });
+    const l = new T.Line(geo, m); scene.add(l); izler.push({ l, omur: 0.12 });
+  }
+  function namlu(x, y, z) {
+    if (!namluIsik) { namluIsik = new T.PointLight(0xffc060, 0, 9, 2); scene.add(namluIsik); }
+    namluIsik.position.set(x, y, z); namluIsik.intensity = 30;
+    for (let i = 0; i < 6; i++) parcacik(1, { x, y, z, vx: rnd(-1.5, 1.5), vy: rnd(-0.5, 1.5), vz: rnd(-1.5, 1.5), renk: i % 2 ? 0xffd060 : 0xff8a20, boy: rnd(0.25, 0.45), omur: 0.08 });
+  }
+  function kanEfekt(x, y, z, kafa) {
+    for (let i = 0; i < (kafa ? 26 : 14); i++) parcacik(0, { x, y, z, vx: rnd(-2.5, 2.5), vy: rnd(0, 3), vz: rnd(-2.5, 2.5), renk: i % 3 ? 0x9a0a0a : 0xd02020, boy: rnd(0.12, 0.3), omur: rnd(0.3, 0.6), yer: 12 });
+  }
+  function duvarIzi(x, y, z) { toz(x, y, z, 5, 0xc8a878, 0.4); kivilcim(x, y, z, 5, 0xffe0a0); }
   // Uzuv: omuz/kalça (p) → üst parça → dirsek/diz (orta) → alt parça → el/ayak (alt)
   function uzuv(r, boy, m, x, y, z, ucMat, kol = false) {
     const p = new T.Group(); p.position.set(x, y, z);
@@ -583,16 +624,18 @@ const Sahne = (() => {
     yumusat(P.kolL.p, 'z', omuzL, k); yumusat(P.kolL.orta, 'z', dirsekL, k);
     yumusat(P.kolL.p, 'x', -yanKol, k); yumusat(P.kolR.p, 'x', yanKol, k);
     // sağ kol: asa savurma ya da Firavun'un asayı tutuşu
-    if (s.salla > 0) {
-      const q = 1 - s.salla;
-      P.kolR.p.rotation.z = q < 0.35 ? lerpS(omuzR, 2.7, q / 0.35) : lerpS(2.7, -0.6, (q - 0.35) / 0.65);
-      P.kolR.orta.rotation.z = q < 0.35 ? 0.9 : 0.2; P.kolR.p.rotation.x = 0.35;
+    if (s.duello) {
+      // düello: tabancayı öne doğrultur, sol el destek; ateş edince kol yukarı teper
+      const tep = s.ates || 0;
+      P.kolR.p.rotation.z = 1.5 + tep * 0.45; P.kolR.orta.rotation.z = 0.04; P.kolR.p.rotation.x = 0.1;
+      yumusat(P.kolL.p, 'z', 1.3, k); yumusat(P.kolL.orta, 'z', 0.55, k);
     } else if (K.firavun && !s.duello && s.yerde && hiz < 3) { yumusat(P.kolR.p, 'z', 0.35, k); yumusat(P.kolR.orta, 'z', 1.2, k); }
     else { yumusat(P.kolR.p, 'z', omuzR, k); yumusat(P.kolR.orta, 'z', dirsekR, k); }
     K.govde.rotation.z += (egil - K.govde.rotation.z) * k;
     K.govde.position.y += (sicra - K.govde.position.y) * k;
     if (P.bas) P.bas.rotation.z = -K.govde.rotation.z * 0.6;
-    K.asa.visible = K.firavun || !!s.duello;
+    K.asa.visible = K.firavun && !s.duello;
+    K.silah.visible = !!s.duello;
     K.golge.position.y = 0.02;
   }
   const lerpS = (a, b, t) => a + (b - a) * t;  function karakterSil(K) { if (K) scene.remove(K.g); }
@@ -738,6 +781,9 @@ const Sahne = (() => {
     // ortamda uçuşan toz zerreleri
     if (Math.random() < dt * 14) parcacik(1, { x: kam.x + rnd(-8, 14), y: kam.y + rnd(-2, 4), z: kam.z + rnd(-4, 4), vx: rnd(-0.1, 0.3), vy: rnd(-0.05, 0.1), vz: rnd(-0.1, 0.1), renk: 0xffd8a0, boy: 0.04, omur: 3 });
     parcacikGuncelle(dt);
+    for (let i = izler.length - 1; i >= 0; i--) { const z = izler[i]; z.omur -= dt; z.l.material.opacity = Math.max(0, z.omur / 0.12) * 0.9; if (z.omur <= 0) { scene.remove(z.l); z.l.geometry.dispose(); z.l.material.dispose(); izler.splice(i, 1); } }
+    if (namluIsik && namluIsik.intensity > 0) namluIsik.intensity = Math.max(0, namluIsik.intensity - dt * 400);
+    if (elSilahi) { elTepme = Math.max(0, elTepme - dt * 6); elSilahi.rotation.x = 0; elSilahi.rotation.z = elTepme * 0.5; elSilahi.position.z = -0.42 + elTepme * 0.07; }
     dugmeIsaretle(dugmeVurgu);
     renderer.render(scene, camera);
   }
@@ -747,6 +793,8 @@ const Sahne = (() => {
     RENKLER, kur, ciz, karakterYap, karakterGuncelle, karakterSil, etiketYap, tuzakGuncelle,
     kameraTakip, kameraSerbest, kameraUcan, menuKamera,
     toz, kivilcim, lavSicra, ruh, konfeti, vurusEfekt, sarsinti, ayakTozu, duelloHalkasi, parcacik,
+    iz, namlu, kanEfekt, duvarIzi,
+    elSilah(gorunsun, tepme) { if (!elSilahi) return; elSilahi.visible = !!gorunsun; if (tepme) elTepme = 1; },
     dugmeVurgula(id) { dugmeVurgu = id; },
     get scene() { return scene; }, get camera() { return camera; }, get renderer() { return renderer; },
   };

@@ -565,16 +565,58 @@ const Dunya = (() => {
     return { g, bas };
   }
   // Düello botu: rakibe yaklaş, yanlara kay, menzildeyken asayı savur
+  // ---------- Düello: Deagle ----------
+  // gövde: (x,z) çevresinde R_GOVDE yarıçaplı, ayaktan omuza kutu; kafa: küre. Firavun 1.12 kat büyük.
+  const SILAH = { govde: 34, kafa: 80, bekle: 0.4, sarjor: 7, doldur: 1.6, menzil: 70 };
+  function hedefSekli(h, firavun) {
+    const s = firavun ? 1.12 : 1, egik = !!h.egik;
+    const ust = (egik ? 0.95 : 1.45) * s, kafaY = (egik ? 1.08 : 1.66) * s;
+    return { ust, kafaY, kafaR: 0.24 * s, r: 0.36 * s };
+  }
+  // o: ışın başı, d: birim yön. Duvar (isinKes) daha yakınsa ıskalar. → { mesafe, kafa } | null
+  function atesIsabet(ox, oy, oz, dx, dy, dz, h, firavun) {
+    const S = hedefSekli(h, firavun), M_ = SILAH.menzil;
+    let en = null;
+    // kafa (küre)
+    { const cx = h.x - ox, cy = h.y + S.kafaY - oy, cz = h.z - oz, b = cx * dx + cy * dy + cz * dz, c = cx * cx + cy * cy + cz * cz - S.kafaR * S.kafaR, D_ = b * b - c;
+      if (D_ >= 0) { const tt = b - Math.sqrt(D_); if (tt > 0 && tt < M_) en = { mesafe: tt, kafa: true }; } }
+    // gövde (kutu)
+    { let t0 = 0, t1 = M_, ok = true;
+      for (const [o, d, mn, mx] of [[ox, dx, h.x - S.r, h.x + S.r], [oy, dy, h.y, h.y + S.ust], [oz, dz, h.z - S.r, h.z + S.r]]) {
+        if (Math.abs(d) < 1e-9) { if (o < mn || o > mx) { ok = false; break; } continue; }
+        let ta = (mn - o) / d, tb = (mx - o) / d; if (ta > tb) { const q = ta; ta = tb; tb = q; }
+        if (ta > t0) t0 = ta; if (tb < t1) t1 = tb; if (t0 > t1) { ok = false; break; }
+      }
+      if (ok && (!en || t0 < en.mesafe)) en = { mesafe: t0, kafa: false }; }
+    if (!en) return null;
+    const duvar = isinKes(ox, oy, oz, ox + dx * M_, oy + dy * M_, oz + dz * M_) * M_;
+    return duvar < en.mesafe ? null : en;
+  }
+  // Bot düellocu: rakiple 6-12 m arası mesafe tutar, sağa sola kaçar, ara sıra zıplar ve nişan alıp ateş eder.
   function botDuello(b, p, rakip, t) {
     const g = { ileri: 0, yan: 0, zipla: false, yaw: p.yaw };
     const dx = rakip.x - p.x, dz = rakip.z - p.z, d = Math.hypot(dx, dz);
     g.yaw = Math.atan2(dz, dx);
-    b.duS = b.duS ?? Math.random() * 10;
-    g.ileri = d > 1.7 ? 1 : d < 1.1 ? -0.6 : 0;
-    g.yan = Math.sin(t * 1.7 + b.duS) * 0.8;
-    if (Math.random() < 0.008) g.zipla = true;
-    const vur = d < 2.3 && Math.random() < 0.12;
-    return { g, vur };
+    if (b.duS === undefined) { b.duS = Math.random() * 10; b.yanYon = Math.random() < 0.5 ? 1 : -1; b.yanT = t + 0.6 + Math.random() * 1.2; b.atesT = t + 0.7 + Math.random() * 0.5; }
+    if (t > b.yanT) { b.yanYon = -b.yanYon; b.yanT = t + 0.5 + Math.random() * 1.3; }
+    g.yan = b.yanYon;
+    g.ileri = d > 12 ? 1 : d < 6 ? -0.8 : Math.sin(t * 0.9 + b.duS) * 0.4;
+    // arena duvarına sıkıştıysa yönü çevir
+    if (p.z > ARENA.z2 - 1.5 || p.z < ARENA.z1 + 1.5) { const ic = -Math.sign(p.z) * Math.cos(g.yaw); if (ic * g.yan < 0) { b.yanYon = -b.yanYon; g.yan = b.yanYon; } }
+    if (p.yerde && Math.random() < 0.006) g.zipla = true;
+    let ates = false;
+    if (t >= b.atesT) { ates = true; b.atesT = t + SILAH.bekle + 0.35 + Math.random() * 0.6; }
+    return { g, ates };
+  }
+  // bot ateşinin isabet ihtimali: zorluk, mesafe, hedefin hızı ve botun kendi hareketi
+  function botIsabet(zorluk, p, rakip) {
+    const taban = { kolay: 0.3, orta: 0.42, zor: 0.55 }[zorluk] ?? 0.42;
+    const d = Math.hypot(rakip.x - p.x, rakip.z - p.z);
+    const rh = Math.hypot(rakip.vx || 0, rakip.vz || 0);
+    let k = taban * clamp(1.25 - d / 30, 0.45, 1.1) * clamp(1 - rh * 0.035, 0.45, 1);
+    if (!rakip.yerde) k *= 0.75;
+    if (!p.yerde) k *= 0.5;
+    return k;
   }
 
   return {
@@ -583,7 +625,7 @@ const Dunya = (() => {
     BALTALAR, PLATFORMLAR, LAZER_N, LAV_TABAN, LAV_TEPE, YOL,
     faz, dikenBoy, cokmeAci, cokmeAcik, batanY, batanSalla, tasY, tavanAlt, kayaPos, lavY, kayganAktif, lazerX, alevAktif, alevUyari, baltaAci, baltaUc, platMerkez,
     yakinKutular, zeminY, isinKes, olumKontrol, govdeIt, zeminEtkisi, yeniGovde, adim,
-    yeniKosucuBot, botKosucu, yeniFiravunBot, botFiravun, botDuello, clamp, lerp,
+    yeniKosucuBot, botKosucu, yeniFiravunBot, botFiravun, botDuello, botIsabet, SILAH, hedefSekli, atesIsabet, clamp, lerp,
     bosAkt: () => ({ t: {}, n: {} }),
   };
 })();
