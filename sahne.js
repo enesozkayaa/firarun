@@ -543,7 +543,7 @@ const Sahne = (() => {
   // birinci şahıs: kameraya bağlı tabanca
   let elSilahi = null, elTepme = 0;
   function elSilahKur() {
-    elSilahi = silahYap(1.1); elSilahi.rotation.y = Math.PI / 2; elSilahi.position.set(0.2, -0.2, -0.42); elSilahi.visible = false;
+    elSilahi = silahYap(0.5); elSilahi.rotation.y = Math.PI / 2; elSilahi.position.set(0.2, -0.17, -0.38); elSilahi.visible = false;
     elSilahi.traverse(o => { if (o.isMesh) { o.castShadow = false; o.renderOrder = 10; } });
     camera.add(elSilahi); scene.add(camera);
   }
@@ -716,7 +716,7 @@ const Sahne = (() => {
   // göz yüksekliği: eğilince alçalır (kamera yumuşakça iner)
   let gozY = 1.62;
   const basY = h => { const hedef = (h.boy || (h.egik ? Dunya.EGIK_BOY : Dunya.BOY)) - 0.18; gozY += (hedef - gozY) * 0.25; return gozY; };
-  function kameraTakip(h, yaw, pitch, birinci, uzak = 5.2) {
+  function kameraTakip(h, yaw, pitch, birinci, uzak = 5.2, omuz = 0.45) {
     const cy = Math.cos(pitch), sy = Math.sin(pitch);
     const fx = Math.cos(yaw) * cy, fz = Math.sin(yaw) * cy;
     if (birinci) {
@@ -727,7 +727,7 @@ const Sahne = (() => {
     }
     const hx = h.x, hy = h.y + basY(h) - 0.05, hz = h.z;
     // omuz üstü: biraz sağa kaydır
-    const sagx = -Math.sin(yaw) * 0.45, sagz = Math.cos(yaw) * 0.45;
+    const sagx = -Math.sin(yaw) * omuz, sagz = Math.cos(yaw) * omuz;
     let cx = hx - fx * uzak + sagx, cyy = hy + sy * uzak + 0.3, cz = hz - fz * uzak + sagz;
     const k = Dunya.isinKes(hx, hy, hz, cx, cyy, cz);
     if (k < 1) { const kk = Math.max(0.08, k - 0.06); cx = hx + (cx - hx) * kk; cyy = hy + (cyy - hy) * kk; cz = hz + (cz - hz) * kk; }
@@ -783,7 +783,7 @@ const Sahne = (() => {
     parcacikGuncelle(dt);
     for (let i = izler.length - 1; i >= 0; i--) { const z = izler[i]; z.omur -= dt; z.l.material.opacity = Math.max(0, z.omur / 0.12) * 0.9; if (z.omur <= 0) { scene.remove(z.l); z.l.geometry.dispose(); z.l.material.dispose(); izler.splice(i, 1); } }
     if (namluIsik && namluIsik.intensity > 0) namluIsik.intensity = Math.max(0, namluIsik.intensity - dt * 400);
-    if (elSilahi) { elTepme = Math.max(0, elTepme - dt * 6); elSilahi.rotation.x = 0; elSilahi.rotation.z = elTepme * 0.5; elSilahi.position.z = -0.42 + elTepme * 0.07; }
+    if (elSilahi) { elTepme = Math.max(0, elTepme - dt * 6); elSilahi.rotation.x = 0; elSilahi.rotation.z = elTepme * 0.5; elSilahi.position.z = -0.38 + elTepme * 0.05; }
     dugmeIsaretle(dugmeVurgu);
     renderer.render(scene, camera);
   }
