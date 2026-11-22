@@ -573,6 +573,11 @@ const Sahne = (() => {
       omuzL = 0.35; omuzR = 0.2; dirsekL = 0.6; dirsekR = 0.6; yanKol = 0.75;
       egil = -0.05; sicra = 0;
     }
+    // eğilme: kalçalar öne, dizler çok bükük, gövde alçak ve öne eğik; havada dizler karna çekilir
+    if (s.egik) {
+      if (s.yerde) { kalcaL += 1.05; kalcaR += 1.05; dizL -= 1.55; dizR -= 1.55; egil -= 0.3; sicra -= 0.55; omuzL += 0.3; omuzR += 0.3; }
+      else { kalcaL = 1.6; kalcaR = 1.4; dizL = -2.1; dizR = -2.0; sicra = 0.1; egil = -0.25; }
+    }
     yumusat(P.bacakL.p, 'z', kalcaL, k); yumusat(P.bacakR.p, 'z', kalcaR, k);
     yumusat(P.bacakL.orta, 'z', dizL, k); yumusat(P.bacakR.orta, 'z', dizR, k);
     yumusat(P.kolL.p, 'z', omuzL, k); yumusat(P.kolL.orta, 'z', dirsekL, k);
@@ -665,16 +670,19 @@ const Sahne = (() => {
   // ---------- Kamera ----------
   // mod: 'takip' (arkadan), 'birinci' (gözden), 'serbest' (bir noktanın çevresinde dönen)
   const kamTmp = { yaw: 0, pitch: 0.3 };
+  // göz yüksekliği: eğilince alçalır (kamera yumuşakça iner)
+  let gozY = 1.62;
+  const basY = h => { const hedef = (h.boy || (h.egik ? Dunya.EGIK_BOY : Dunya.BOY)) - 0.18; gozY += (hedef - gozY) * 0.25; return gozY; };
   function kameraTakip(h, yaw, pitch, birinci, uzak = 5.2) {
     const cy = Math.cos(pitch), sy = Math.sin(pitch);
     const fx = Math.cos(yaw) * cy, fz = Math.sin(yaw) * cy;
     if (birinci) {
-      kam.x = h.x + Math.cos(yaw) * 0.15; kam.y = h.y + 1.62; kam.z = h.z + Math.sin(yaw) * 0.15;
+      kam.x = h.x + Math.cos(yaw) * 0.15; kam.y = h.y + basY(h); kam.z = h.z + Math.sin(yaw) * 0.15;
       kam.bx = kam.x + fx; kam.by = kam.y - sy; kam.bz = kam.z + fz;
       kam.ani = true;
       return;
     }
-    const hx = h.x, hy = h.y + 1.55, hz = h.z;
+    const hx = h.x, hy = h.y + basY(h) - 0.05, hz = h.z;
     // omuz üstü: biraz sağa kaydır
     const sagx = -Math.sin(yaw) * 0.45, sagz = Math.cos(yaw) * 0.45;
     let cx = hx - fx * uzak + sagx, cyy = hy + sy * uzak + 0.3, cz = hz - fz * uzak + sagz;

@@ -37,7 +37,7 @@
         <summary>📖 Nasıl oynanır?</summary>
         <ul>
           <li>2 ile 10 kişi. Tek başına botlarla ya da online odada (boş yerlere bot eklenebilir). Her turda biri <b>Firavun</b> olur, sırayla herkes bir kez (ya da iki kez) Firavun olur.</li>
-          <li>🏃 <b>Koşucu:</b> <b>W A S D</b> / oklar yürü, <b>Boşluk</b> zıpla. Sahneye tıklayınca fare kamerayı çevirir (<b>Esc</b> fareyi bırakır). <b>V</b>: birinci şahıs / üçüncü şahıs. Telefonda solda yürüme topu, sağ tarafı sürükleyince kamera döner.</li>
+          <li>🏃 <b>Koşucu:</b> <b>W A S D</b> / oklar yürü, <b>Boşluk</b> zıpla, <b>Ctrl</b> (ya da <b>C</b>) basılı tut: eğil. Eğilince yavaş yürürsün; havada eğilirsen bacaklarını çekersin, daha yükseğe yetişirsin. ⚠️ Tarayıcıda Ctrl+W sekmeyi kapatır: Ctrl ile eğilip W'ye basacaksan önce ⛶ ile tam ekrana geç (ya da C ile eğil). Sahneye tıklayınca fare kamerayı çevirir (<b>Esc</b> fareyi bırakır). <b>V</b>: birinci şahıs / üçüncü şahıs. Telefonda solda yürüme topu, sağ tarafı sürükleyince kamera döner.</li>
           <li>🐇 <b>Bunnyhop:</b> Boşluğu basılı tut (yere değince kendiliğinden zıplar), havada <b>W'yi bırak</b>, <b>A</b>'ya basıp fareyi sola, <b>D</b>'ye basıp fareyi sağa çevir. Her zıplamada hızlanırsın! Yere basıp koşarsan hız normale döner.</li>
           <li>🪬 <b>Firavun:</b> koridorun yanındaki cam kabinde yürür; koşucular onu görür, o da koşucuları. Düğmeler camın önünde. Bir düğmenin yanına gelince <b>E</b> (ya da 👆 düğmesi) ile tuzağı çalıştırır. Düğme kırmızıysa doluyordur, biraz bekle.</li>
           <li>🪤 <b>Tuzaklar:</b> 🦂 akrep dikenleri, 🕳️ çöken zemin, 🟫 batan taşlar, 🧱 ezen tavan, 🪨 yuvarlanan kaya (sağdaki girintilere saklan!), 🌋 yükselen lav (sütunlara çık!), 🛢️ yağlı zemin (lava kayma!), ☀️ Ra'nın ışını (üstünden zıpla!), 🪓 çılgın baltalar, 🌉 çöken köprü, 🛶 batan sallar, 🔥 Anubis alevi.</li>
@@ -98,6 +98,7 @@
     <div id="ustSol"><ol id="puanTablo"></ol></div>
     <div id="ustOrta"><div id="fazYazi"></div><div id="sayac"></div><div id="ilerleme"><div id="ilerlemeCubuk"></div></div></div>
     <div id="ustSag">
+      <button id="tamEkranBtn" title="Tam ekran">⛶</button>
       <button id="kameraBtn" title="Birinci / üçüncü şahıs (V)">👁️</button>
       <button id="mikBtn" title="Mikrofon (M)">🎤</button>
       <button id="sesBtn" title="Oyun sesi">🔊</button>
@@ -120,6 +121,7 @@
     <div id="joystick" class="dokunmatik kontrol"><div id="joyTop"></div></div>
     <div id="sagTuslar" class="dokunmatik kontrol">
       <button id="eylemBtn" class="gizli2">👆</button>
+      <button id="egilBtn">⤓</button>
       <button id="ziplaBtn">⤒</button>
     </div>
   </div>

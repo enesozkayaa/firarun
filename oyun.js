@@ -5,7 +5,7 @@
 // =============================================================
 
 const Oyun = (() => {
-  const SURUM = 8;   // sw.js ONBELLEK numarasıyla aynı tut; oyuncular farklı sürümdeyse uyarı çıkar
+  const SURUM = 9;   // sw.js ONBELLEK numarasıyla aynı tut; oyuncular farklı sürümdeyse uyarı çıkar
   const $ = id => document.getElementById(id);
   const D = Dunya;
   const dokun = matchMedia('(pointer: coarse)').matches;
@@ -137,6 +137,9 @@ const Oyun = (() => {
   $('sesBtn').textContent = Ses.acik ? '🔊' : '🔇';
   $('mikBtn').onclick = mikDegistir;
   $('kameraBtn').onclick = kameraDegistir;
+  // Tam ekran: tarayıcı izin verirse klavye kilitlenir, Ctrl+W gibi tuşlar sekmeyi kapatmaz (çıkmak için Esc'yi basılı tut)
+  $('tamEkranBtn').onclick = () => { if (document.fullscreenElement) document.exitFullscreen?.(); else document.documentElement.requestFullscreen?.().catch(() => {}); };
+  document.addEventListener('fullscreenchange', () => { if (document.fullscreenElement) navigator.keyboard?.lock?.().catch(() => {}); else navigator.keyboard?.unlock?.(); });
   async function mikDegistir() {
     if (mod === 'yerel' || !mod) return;
     if (Ag.sesAcik) Ag.sesKapat(); else if (!(await Ag.sesAc())) { akis('🎤 Mikrofona izin verilmedi.', 'kotu'); $('lobiDurum').textContent = 'Mikrofona izin verilmedi.'; }
@@ -426,12 +429,14 @@ const Oyun = (() => {
 
   // ---------- Klavye / fare / dokunmatik ----------
   const tus = new Set();
-  let ziplaBas = false, otopilot = null;
+  let ziplaBas = false, otopilot = null, egilDokun = false;
   const joy = { x: 0, y: 0, id: null };
   addEventListener('keydown', e => {
     if (/^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName)) return;
     const k = e.key.toLowerCase();
     if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' '].includes(k)) e.preventDefault();
+    // oyundayken Ctrl ile eğilirken tarayıcının Ctrl kısayolları (kaydet, yer imi…) çalışmasın
+    if (e.ctrlKey && O && O.faz === 'kosu') e.preventDefault();
     if (!e.repeat) {
       if (k === ' ') ziplaBas = true;
       if (k === 'e' && O?.ben) { if (O.duello) vurDene(); else tuzakBasDene(); }
@@ -442,7 +447,7 @@ const Oyun = (() => {
     tus.add(k);
   });
   addEventListener('keyup', e => tus.delete(e.key.toLowerCase()));
-  addEventListener('blur', () => { tus.clear(); joy.x = joy.y = 0; });
+  addEventListener('blur', () => { tus.clear(); joy.x = joy.y = 0; egilDokun = false; });
   const kanvas = $('sahne');
   let surukle = null;
   const oyunda = () => O && O.faz === 'kosu' && !$('hud').classList.contains('gizli');
@@ -487,6 +492,9 @@ const Oyun = (() => {
     joy.x = dx; joy.y = dy; JT.style.transform = `translate(${dx * R * 0.6}px, ${dy * R * 0.6}px)`;
   }
   $('ziplaBtn').addEventListener('pointerdown', e => { e.preventDefault(); ziplaBas = true; $('ziplaBtn').classList.add('basili'); });
+  // telefonda eğilme: basılı tuttukça eğil
+  $('egilBtn').addEventListener('pointerdown', e => { e.preventDefault(); egilDokun = true; $('egilBtn').classList.add('basili'); try { $('egilBtn').setPointerCapture(e.pointerId); } catch (x) { } });
+  ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(t => $('egilBtn').addEventListener(t, () => { egilDokun = false; $('egilBtn').classList.remove('basili'); }));
   ['pointerup', 'pointercancel', 'pointerleave'].forEach(t => $('ziplaBtn').addEventListener(t, () => $('ziplaBtn').classList.remove('basili')));
   $('eylemBtn').addEventListener('pointerdown', e => { e.preventDefault(); if (O?.duello) vurDene(); else tuzakBasDene(); });
   function kontrolGoster(v) { document.querySelectorAll('.kontrol').forEach(e => e.classList.toggle('gizli2', !v)); }
@@ -496,7 +504,7 @@ const Oyun = (() => {
     let ileri = (v('w') || v('arrowup') ? 1 : 0) - (v('s') || v('arrowdown') ? 1 : 0);
     let yan = (v('d') || v('arrowright') ? 1 : 0) - (v('a') || v('arrowleft') ? 1 : 0);
     if (joy.id !== null) { ileri = -joy.y; yan = joy.x; }
-    const g = { ileri, yan, zipla: ziplaBas || v(' '), yaw: kam.yaw };
+    const g = { ileri, yan, zipla: ziplaBas || v(' '), egil: v('control') || v('c') || egilDokun, yaw: kam.yaw };
     if (otopilot && O?.ben) {
       if (O.ben.rol === 'firavun') { const r = D.botFiravun(otopilot.f ||= D.yeniFiravunBot('orta'), O.ben, O.t, O.akt, kosucuGovdeleri(), hazirMi); if (r.bas !== null) eve({ tip: 'bas', id: r.bas }); return r.g; }
       return D.botKosucu(otopilot.k ||= D.yeniKosucuBot('zor', 0), O.ben, O.t, O.akt, { f: O.govdeler.get(O.firavun)?.s, hazir: hazirMi });
@@ -519,7 +527,7 @@ const Oyun = (() => {
     const fare = kilit ? 'Esc: fareyi bırak' : 'Sahneye tıkla: fareyle bak';
     if (O.duello && (O.benNo === O.duello.k || O.benNo === O.duello.f)) $('ipucu').textContent = `WASD yürü · Boşluk zıpla · Tıkla / E: asayla vur · ${fare}`;
     else if (O.ben.rol === 'firavun') $('ipucu').textContent = `WASD yürü · E: yanındaki düğmeye bas · V: kamera · ${fare}`;
-    else $('ipucu').textContent = `WASD yürü · Boşluk zıpla · V: birinci/üçüncü şahıs · ${fare}`;
+    else $('ipucu').textContent = `WASD yürü · Boşluk zıpla · Ctrl / C eğil · V: kamera · ⛶ tam ekran · ${fare}`;
   }
 
   // ---------- Kendi karakterim ----------
@@ -555,7 +563,7 @@ const Oyun = (() => {
     // konum gönder
     if (O.t - O.sonGonder > 1 / 15 || O.t < O.sonGonder) {
       O.sonGonder = O.t;
-      const anim = (p.yerde ? 1 : 0) | (hiz > 1 ? 2 : 0);
+      const anim = (p.yerde ? 1 : 0) | (hiz > 1 ? 2 : 0) | (p.egik ? 4 : 0);
       eve({ tip: 'ben', d: [+p.x.toFixed(2), +p.y.toFixed(2), +p.z.toFixed(2), +p.yaw.toFixed(2), anim, +p.vx.toFixed(1), +p.vz.toFixed(1)] });
     }
   }
@@ -625,7 +633,7 @@ const Oyun = (() => {
         if (O.olu.has(no)) return;
         if (no === O.benNo && O.ben) {
           const p = O.ben;
-          Object.assign(c.s, { x: p.x, y: p.y, z: p.z, yaw: p.yaw, hiz: Math.hypot(p.vx, p.vz), yerde: p.yerde });
+          Object.assign(c.s, { x: p.x, y: p.y, z: p.z, yaw: p.yaw, hiz: Math.hypot(p.vx, p.vz), yerde: p.yerde, egik: !!p.egik });
         } else {
           const H = c.hedef, s = c.s;
           const gecen = Math.min(0.15, (simdi - H.zaman) / 1000);
@@ -633,7 +641,7 @@ const Oyun = (() => {
           const k = 1 - Math.exp(-dt * 14);
           s.x += (tx - s.x) * k; s.y += (H.y - s.y) * k; s.z += (tz - s.z) * k;
           let fark = H.yaw - s.yaw; while (fark > Math.PI) fark -= 2 * Math.PI; while (fark < -Math.PI) fark += 2 * Math.PI; s.yaw += fark * k;
-          s.hiz = Math.hypot(H.vx || 0, H.vz || 0); s.yerde = !!(H.anim & 1);
+          s.hiz = Math.hypot(H.vx || 0, H.vz || 0); s.yerde = !!(H.anim & 1); s.egik = !!(H.anim & 4);
         }
         c.s.duello = !!(O.duello && (no === O.duello.k || no === O.duello.f));
         if (c.s.salla > 0) c.s.salla = Math.max(0, c.s.salla - dt / 0.45);

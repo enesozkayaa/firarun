@@ -6,7 +6,7 @@
 // =============================================================
 
 const Dunya = (() => {
-  const R = 0.38, BOY = 1.8, HIZ = 7, FIR_HIZ = 9, G = 24, ZIPLA = 8.4;
+  const R = 0.38, BOY = 1.8, EGIK_BOY = 1.15, HIZ = 7, FIR_HIZ = 9, G = 24, ZIPLA = 8.4;
   const GALERI_Y = 1.2, GALERI_Z = -6.4;
   const VARIS_X = 243.5;
   const LAV_Y = -1.2;
@@ -203,7 +203,7 @@ const Dunya = (() => {
   // ---------- Ölüm kontrolü ----------
   const BU = {};
   function olumKontrol(p, t, akt) {
-    const { x, y, z } = p;
+    const { x, y, z } = p, boy = p.boy || BOY;
     if (y < -2.5) return 'dustu';
     for (const L of LAV_CUKUR) if (x > L.x1 && x < L.x2 && z > L.z1 && z < L.z2 && y < LAV_Y + 0.5) return 'lav';
     if (z < -4.2 || x > 236) return null;
@@ -213,12 +213,12 @@ const Dunya = (() => {
       for (let i = 0; i < 3; i++) {
         const [a, b] = TAVANLAR[i]; if (x + R < a || x - R > b) continue;
         const k = f - i * 0.3;
-        if (k > 0.4 && k < 1.65 && tavanAlt(f, i) < y + BOY - 0.1) return 'tavan';
+        if (k > 0.4 && k < 1.65 && tavanAlt(f, i) < y + boy - 0.1) return 'tavan';
       }
     }
     if (x > 70 && x < 102) {
       const k = kayaPos(faz(akt, 4, t));
-      if (k) { const cy = clamp(k.y, y + R, y + BOY - R); const d = Math.hypot(x - k.x, cy - k.y, z - k.z); if (d < KAYA_R + R - 0.05) return 'kaya'; }
+      if (k) { const cy = clamp(k.y, y + R, y + boy - R); const d = Math.hypot(x - k.x, cy - k.y, z - k.z); if (d < KAYA_R + R - 0.05) return 'kaya'; }
     }
     if (x > 97 && x < 116 && y < lavY(faz(akt, 5, t)) - 0.02) return 'lav';
     if (x > 135 && x < 157 && y < 0.55) {
@@ -232,7 +232,7 @@ const Dunya = (() => {
         // bıçak: uçtan pivota doğru 1 m'lik parça; iki noktayla yoklanır
         for (let s = 0; s <= 1; s += 0.5) {
           const px = u.x, py = u.y + Math.cos(u.a) * s, pz = u.z - Math.sin(u.a) * s;
-          const cy = clamp(py, y + 0.2, y + BOY - 0.2);
+          const cy = clamp(py, y + 0.2, y + boy - 0.2);
           if (Math.hypot(x - px, cy - py, z - pz) < 0.72 + R) return 'balta';
         }
       }
@@ -255,10 +255,10 @@ const Dunya = (() => {
     p[e] += d;
     for (const b of kutular) {
       if (b._ig === igDamga) continue;
-      if (!(p.x + R > b.x1 && p.x - R < b.x2 && p.y + BOY > b.y1 && p.y < b.y2 && p.z + R > b.z1 && p.z - R < b.z2)) continue;
+      if (!(p.x + R > b.x1 && p.x - R < b.x2 && p.y + (p.boy || BOY) > b.y1 && p.y < b.y2 && p.z + R > b.z1 && p.z - R < b.z2)) continue;
       if (e === 'y') {
         if (d <= 0) { p.y = b.y2; p.vy = 0; p.yerde = true; p.uzerinde = b; }
-        else { p.y = b.y1 - BOY - 0.001; p.vy = Math.min(0, p.vy); }
+        else { p.y = b.y1 - (p.boy || BOY) - 0.001; p.vy = Math.min(0, p.vy); }
       } else {
         if (yerde && b.y2 - p.y <= 0.45 && b.y2 - p.y > 0) { p.y = b.y2; continue; }   // küçük basamağa çık
         if (e === 'x') { p.x = d > 0 ? b.x1 - R - 0.001 : b.x2 + R + 0.001; p.vx = 0; }
@@ -266,10 +266,31 @@ const Dunya = (() => {
       }
     }
   }
-  // g: { ileri, yan (-1..1), zipla, yaw }  → olay listesi döner
+  // (x,y,z)'de h boyunda bir gövde için yer boş mu?
+  function bosMu(x, y, z, h, t, akt) {
+    for (const b of yakinKutular(x - 1, x + 1, t, akt, TMP2)) {
+      if (b.m === 'gorunmez') continue;
+      if (x + R > b.x1 && x - R < b.x2 && y + h > b.y1 && y < b.y2 - 0.001 && z + R > b.z1 && z - R < b.z2) return false;
+    }
+    return true;
+  }
+  // Eğilme: boy kısalır. Yerde baş alçalır ve yavaşlarsın; havada eğilince bacaklar yukarı çekilir (CS'teki gibi daha yükseğe yetişirsin).
+  function egilme(p, egil, t, akt) {
+    if (p.boy === undefined) p.boy = BOY;
+    const fark = BOY - EGIK_BOY;
+    if (egil && p.boy > EGIK_BOY) { if (!p.yerde) p.y += fark; p.boy = EGIK_BOY; }
+    else if (!egil && p.boy < BOY) {
+      if (p.yerde) { if (bosMu(p.x, p.y, p.z, BOY, t, akt)) p.boy = BOY; }
+      else if (bosMu(p.x, p.y - fark, p.z, BOY, t, akt)) { p.y -= fark; p.boy = BOY; }
+      else if (bosMu(p.x, p.y, p.z, BOY, t, akt)) p.boy = BOY;
+    }
+    p.egik = p.boy < BOY;
+  }
+  // g: { ileri, yan (-1..1), zipla, egil, yaw }  → olay listesi döner
   function adim(p, g, t, dt, akt) {
     const ol = [];
-    const hiz = p.rol === 'firavun' ? FIR_HIZ : HIZ;
+    egilme(p, !!g.egil, t, akt);
+    const hiz = (p.rol === 'firavun' ? FIR_HIZ : HIZ) * (p.egik && p.yerde ? 0.5 : 1);
     const fx = Math.cos(g.yaw), fz = Math.sin(g.yaw);
     let ix = fx * (g.ileri || 0) - fz * (g.yan || 0), iz = fz * (g.ileri || 0) + fx * (g.yan || 0);
     const l = Math.hypot(ix, iz); if (l > 1) { ix /= l; iz /= l; }
@@ -309,7 +330,7 @@ const Dunya = (() => {
     igDamga++;
     for (const b of kutular) {
       if (b.m === 'gorunmez') continue;
-      if (p.x + R > b.x1 && p.x - R < b.x2 && p.y + BOY > b.y1 && p.y < b.y2 && p.z + R > b.z1 && p.z - R < b.z2) {
+      if (p.x + R > b.x1 && p.x - R < b.x2 && p.y + (p.boy || BOY) > b.y1 && p.y < b.y2 && p.z + R > b.z1 && p.z - R < b.z2) {
         if (b.y2 - p.y < 0.7) { p.y = b.y2; if (p.vy < 0) p.vy = 0; } else b._ig = igDamga;
       }
     }
@@ -544,7 +565,7 @@ const Dunya = (() => {
   }
 
   return {
-    R, BOY, HIZ, FIR_HIZ, G, ZIPLA, GALERI_Y, GALERI_Z, VARIS_X, LAV_Y, KAYA_R, BALTA_PIVOT, BALTA_L, DUELLO, ARENA,
+    R, BOY, EGIK_BOY, HIZ, FIR_HIZ, G, ZIPLA, GALERI_Y, GALERI_Z, VARIS_X, LAV_Y, KAYA_R, BALTA_PIVOT, BALTA_L, DUELLO, ARENA,
     TUZAKLAR, TUR_SURE, dolmaSuresi, KUTULAR, DINAMIK, TASLAR, TAS_YARI, SUTUNLAR, SUTUN_Y, NISLER, LAV_CUKUR, CUKURLAR, TAVANLAR, TAVAN_UST,
     BALTALAR, PLATFORMLAR, LAZER_N, LAV_TABAN, LAV_TEPE, YOL,
     faz, dikenBoy, cokmeAci, cokmeAcik, batanY, batanSalla, tasY, tavanAlt, kayaPos, lavY, kayganAktif, lazerX, alevAktif, alevUyari, baltaAci, baltaUc, platMerkez,
