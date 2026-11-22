@@ -24,7 +24,7 @@ const Motor = (() => {
       ayar, oyuncular: oyuncular.map((o, no) => ({ ...o, no, puan: 0, cikti: false })),
       sira, tur: 0, toplamTur: oyuncular.length * (ayar.kez || 1),
       faz: 'bos', t: 0, fazBitis: 0, firavun: null, govde: {}, bot: {}, olu: {}, vardi: {}, kuyruk: [], duello: null,
-      akt: D.bosAkt(), hazirT: {}, sonDurum: 0, istat: {}, firavunCan: CAN, firavunGaleri: null, sonGelen: {},
+      akt: D.bosAkt(), hazirT: {}, sonDurum: 0, istat: {}, firavunCan: CAN, firavunGaleri: null, isin: {},
     };
     yay({ tip: 'basla', oyuncular: M.oyuncular.map(o => ({ no: o.no, id: o.id, ad: o.ad, bot: !!o.bot, renk: o.renk })), ayar, toplamTur: M.toplamTur });
     turBaslat();
@@ -45,6 +45,7 @@ const Motor = (() => {
 
   // ---------- Tur ----------
   function turBaslat() {
+    if (aktifler().length < 2) { oyunSonu(); return; }   // tur sonu ekranında oyuncular ayrıldıysa
     M.tur++;
     // sıradaki Firavun (çıkanlar atlanır)
     let fno = null;
@@ -54,6 +55,8 @@ const Motor = (() => {
     M.akt = D.bosAkt(); M.hazirT = {}; M.olu = {}; M.vardi = {}; M.kuyruk = []; M.duello = null; M.firavunCan = CAN; M.firavunGaleri = null;
     M.istat = { oldurme: 0, nedenler: {} }; M.bitti = false; M.dogus = {}; M.olumSay = {}; M.vardiPuan = {};
     M.govde = {}; M.bot = {};
+    M.sonDurum = -Infinity;   // yeni turda saat -5'ten başlar: sıfırlanmazsa 'd' yayını eski turun süresi geçene kadar kesiliyordu (botlar donmuş görünüyordu)
+    M.isin = {};
     const yerler = {};
     const kosucular = aktifler().filter(o => o.no !== fno);
     kosucular.forEach((o, i) => { yerler[o.no] = baslangicYeri(i); });
@@ -61,11 +64,14 @@ const Motor = (() => {
     aktifler().forEach(o => {
       const [x, y, z, yaw] = yerler[o.no];
       M.govde[o.no] = D.yeniGovde(x, y, z, yaw, o.no === fno ? 'firavun' : 'kosucu');
+      isinla(o.no, x, z);
       if (o.bot) M.bot[o.no] = o.no === fno ? D.yeniFiravunBot(M.ayar.botZorluk) : D.yeniKosucuBot(M.ayar.botZorluk, o.no);
     });
     yay({ tip: 'tur', tur: M.tur, toplamTur: M.toplamTur, firavun: fno, yerler, t: M.t, sure: M.ayar.sure, puan: puanlar(), bekleme: M.ayar.bekleme });
   }
 
+  // ışınlanan oyuncunun eski yerden yoldaki konum mesajları, yeni yere yakın bir konum gelene kadar yok sayılır
+  function isinla(no, x, z) { M.isin[no] = [x, z]; }
   function baslangicYeri(i) { return [-9 + (i % 4) * 2.2, 0, -2.7 + Math.floor(i / 4) * 2.7 + (Math.random() - 0.5) * 0.4, 0]; }
   const bastanDogar = () => M.ayar.dogma === 'bastan';
   const hazir = id => M.t >= (M.hazirT[id] ?? -1e9);
@@ -89,7 +95,8 @@ const Motor = (() => {
     if (neden !== 'cikti' && f && !f.cikti) { f.puan += 1; M.istat.oldurme++; }
     M.kuyruk = M.kuyruk.filter(k => k !== no);
     yay({ tip: 'oldu', no, neden, x: g ? yuvarla(g.x) : 0, y: g ? yuvarla(g.y) : 0, z: g ? yuvarla(g.z) : 0, puan: puanlar(), dogus: M.dogus[no] !== undefined ? DOGUS_SURE : null });
-    if (bastanDogar()) return;   // baştan doğma modunda tur, süre bitene ya da Firavun ölene kadar sürer
+    // baştan doğma modunda tur, süre bitene ya da Firavun ölene kadar sürer (koşucu kalmadıysa biter)
+    if (bastanDogar() && aktifler().some(o => o.no !== M.firavun)) return;
     const kalan = aktifler().filter(o => o.no !== M.firavun && !M.olu[o.no]);
     if (!kalan.length) turBitti('firavun', 'hepsi');
   }
@@ -112,7 +119,7 @@ const Motor = (() => {
     const [kx, ky, kz, ky2] = D.DUELLO.k, [fx, fy, fz, fy2] = D.DUELLO.f;
     Object.assign(M.govde[k], { x: kx, y: ky, z: kz, vx: 0, vy: 0, vz: 0, yaw: ky2 });
     Object.assign(f, { x: fx, y: fy, z: fz, vx: 0, vy: 0, vz: 0, yaw: fy2 });
-    M.sonGelen[k] = M.sonGelen[M.firavun] = 'isinlandi';
+    isinla(k, kx, kz); isinla(M.firavun, fx, fz);
     yay({ tip: 'duello', k, f: M.firavun, kp: D.DUELLO.k, fp: D.DUELLO.f, kCan: CAN, fCan: M.firavunCan, hazir: DUELLO_HAZIR });
   }
   // Deagle atışı. Oyuncu kendi ekranında gördüğüne göre isabeti hesaplar (v: {o:[x,y,z], s:[x,y,z], h, k});
@@ -162,17 +169,23 @@ const Motor = (() => {
       M.oyuncular[no].puan += 3;
       turBitti('kosucu', 'duello', no);
     } else {
-      M.duello = null;
+      duelloKapat();
       olum(hedef, 'duello');
       if (M.bitti) return;
       if (M.kuyruk.length) M.duelloBekle = M.t + 2;
-      else { // Firavun galeriye döner
-        const fg = M.firavunGaleri; M.firavunGaleri = null;
-        Object.assign(M.govde[M.firavun], { x: fg.x, y: fg.y, z: fg.z, vx: 0, vy: 0, vz: 0 });
-        M.sonGelen[M.firavun] = 'isinlandi';
-        yay({ tip: 'donus', f: M.firavun, p: [yuvarla(fg.x), yuvarla(fg.y), yuvarla(fg.z)] });
-      }
+      else firavunDon();
     }
+  }
+  // düello bitti (koşucu öldü ya da çıktı): istemciler düello ekranını kapatsın
+  function duelloKapat() { M.duello = null; yay({ tip: 'duelloBitti' }); }
+  // Firavun galeriye döner
+  function firavunDon() {
+    const fg = M.firavunGaleri; if (!fg) return;
+    M.firavunGaleri = null;
+    const g = M.govde[M.firavun]; if (!g) return;
+    Object.assign(g, { x: fg.x, y: fg.y, z: fg.z, vx: 0, vy: 0, vz: 0 });
+    isinla(M.firavun, fg.x, fg.z);
+    yay({ tip: 'donus', f: M.firavun, p: [yuvarla(fg.x), yuvarla(fg.y), yuvarla(fg.z)] });
   }
 
   function dogur(no) {
@@ -181,7 +194,7 @@ const Motor = (() => {
     const [x, y, z, yaw] = baslangicYeri(Math.max(0, i) % 8);
     M.govde[no] = D.yeniGovde(x, y, z, yaw, 'kosucu');
     if (M.bot[no]) { M.bot[no] = D.yeniKosucuBot(M.ayar.botZorluk, no); M.bot[no].durT = M.t + 0.3; }
-    M.sonGelen[no] = 'isinlandi';
+    isinla(no, x, z);
     yay({ tip: 'dogdu', no, p: [yuvarla(x), y, yuvarla(z), yaw] });
   }
 
@@ -201,6 +214,7 @@ const Motor = (() => {
     const sira = aktifler().map(o => o.no).sort((a, b) => M.oyuncular[b].puan - M.oyuncular[a].puan);
     yay({ tip: 'son', puan: puanlar(), sira });
     clearInterval(sayac); sayac = null;
+    if (isci) { isci.terminate(); isci = null; }
   }
 
   // ---------- Girdiler ----------
@@ -210,11 +224,12 @@ const Motor = (() => {
     const no = o.no;
     switch (m.tip) {
       case 'ben': {
-        const g = M.govde[no]; if (!g || !Array.isArray(m.d)) return;
-        if (M.sonGelen[no] === 'isinlandi') {
-          // ışınlandıktan sonra eski yerden gelen konumları yok say
-          if (Math.abs(m.d[0] - g.x) > 20) return;
-          M.sonGelen[no] = null;
+        const g = M.govde[no]; if (!g || !Array.isArray(m.d) || m.d.length < 4 || !m.d.slice(0, 4).every(Number.isFinite)) return;
+        const is = M.isin[no];
+        if (is) {
+          // ışınlandıktan sonra eski yerden gelen konumları yok say (yeni yere yakın konum gelene kadar)
+          if (Math.hypot(m.d[0] - is[0], m.d[2] - is[1]) > 6) return;
+          delete M.isin[no];
         }
         [g.x, g.y, g.z, g.yaw] = m.d; g.anim = m.d[4] || 0; g.vx = m.d[5] || 0; g.vz = m.d[6] || 0;
         g.yerde = !!(g.anim & 1);
@@ -222,7 +237,13 @@ const Motor = (() => {
       }
       case 'bas': tuzakBas(no, m.id | 0); break;
       case 'oldum': if (M.faz === 'kosu') olum(no, String(m.neden || 'dustu').slice(0, 12)); break;
-      case 'vardim': { const g = M.govde[no]; if (g && g.x > D.VARIS_X - 3) vardi(no); break; }
+      case 'vardim': {
+        // 'vardim' son 'ben'den önce gelebilir (çok hızlı bunnyhop): mesajdaki x'e de bak
+        const g = M.govde[no]; if (!g || M.isin[no]) break;
+        if (Number.isFinite(m.x) && m.x > g.x && Math.abs(m.x - g.x) < 15) g.x = m.x;
+        if (g.x > D.VARIS_X - 3) vardi(no);
+        break;
+      }
       case 'ates': ates(no, m); break;
     }
   }
@@ -234,7 +255,7 @@ const Motor = (() => {
     if (M.faz !== 'kosu' || M.bitti) return;
     if (o.no === M.firavun) turBitti('kosucu', 'firavunCikti');
     else {
-      if (M.duello && M.duello.k === o.no) { M.duello = null; M.duelloBekle = M.t + 1; }
+      if (M.duello && M.duello.k === o.no) { duelloKapat(); M.duelloBekle = M.t + 1; }
       if (!M.olu[o.no]) olum(o.no, 'cikti');
     }
   }
@@ -261,7 +282,7 @@ const Motor = (() => {
         if (duelloda) {
           const rakip = M.govde[ono === M.firavun ? M.duello.k : M.firavun];
           if (M.t < M.duello.basT || !rakip) gi = { ileri: 0, yan: 0, yaw: g.yaw };
-          else { const r = D.botDuello(b, g, rakip, ts); gi = r.g; if (r.ates && s === 0) { ates(ono); if (!M.duello || M.bitti) break; } }
+          else { const r = D.botDuello(b, g, rakip, ts); gi = r.g; if (r.ates) { ates(ono); if (!M.duello || M.bitti) break; } }
         } else if (ono === M.firavun) {
           if (M.duello) gi = { ileri: 0, yan: 0, yaw: g.yaw };
           else { const r = D.botFiravun(b, g, ts, M.akt, kosucular, hazir); gi = r.g; if (r.bas !== null && s === 0) tuzakBas(ono, r.bas); }
@@ -286,6 +307,8 @@ const Motor = (() => {
     for (const no in M.dogus) if (M.t >= M.dogus[no] && !M.oyuncular[no].cikti) dogur(+no);
     // düello
     if (!M.duello && M.kuyruk.length && M.t >= (M.duelloBekle ?? 0)) duelloBasla();
+    // sıradaki koşucu çıktıysa/öldüyse Firavun arenada kalmasın
+    if (!M.duello && !M.kuyruk.length && M.firavunGaleri && M.t >= (M.duelloBekle ?? 0)) firavunDon();
     if (M.t > M.ayar.sure && !M.duello) { turBitti('firavun', 'sure'); return; }
     if (M.t > M.ayar.sure + 60) { turBitti('firavun', 'sure'); return; }
     // durum yayını

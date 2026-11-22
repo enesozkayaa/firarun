@@ -638,7 +638,17 @@ const Sahne = (() => {
     K.silah.visible = !!s.duello;
     K.golge.position.y = 0.02;
   }
-  const lerpS = (a, b, t) => a + (b - a) * t;  function karakterSil(K) { if (K) scene.remove(K.g); }
+  const lerpS = (a, b, t) => a + (b - a) * t;  function karakterSil(K) { if (K) { scene.remove(K.g); temizle(K.g); } }
+  // karakterler/etiketler her tur yeniden yapılıyor: GPU belleği birikmesin (ortak malzemelere dokunma)
+  function temizle(o) {
+    if (!o) return;
+    const ortak = new Set([...Object.values(M), ...(silahMat ? Object.values(silahMat) : [])]);
+    o.traverse(c => {
+      if (c.geometry) c.geometry.dispose();
+      const ml = Array.isArray(c.material) ? c.material : c.material ? [c.material] : [];
+      ml.forEach(m => { if (ortak.has(m)) return; if (m.map) m.map.dispose(); m.dispose(); });
+    });
+  }
 
   // ---------- Parçacıklar ----------
   const PN = 2400, sistemler = [];
@@ -790,7 +800,7 @@ const Sahne = (() => {
   let dugmeVurgu = null;
 
   return {
-    RENKLER, kur, ciz, karakterYap, karakterGuncelle, karakterSil, etiketYap, tuzakGuncelle,
+    RENKLER, kur, ciz, karakterYap, karakterGuncelle, karakterSil, temizle, etiketYap, tuzakGuncelle,
     kameraTakip, kameraSerbest, kameraUcan, menuKamera,
     toz, kivilcim, lavSicra, ruh, konfeti, vurusEfekt, sarsinti, ayakTozu, duelloHalkasi, parcacik,
     iz, namlu, kanEfekt, duvarIzi,

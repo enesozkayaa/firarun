@@ -5,7 +5,7 @@
 // =============================================================
 
 const Oyun = (() => {
-  const SURUM = 14;   // sw.js ONBELLEK numarasıyla aynı tut; oyuncular farklı sürümdeyse uyarı çıkar
+  const SURUM = 15;   // sw.js ONBELLEK numarasıyla aynı tut; oyuncular farklı sürümdeyse uyarı çıkar
   const $ = id => document.getElementById(id);
   const D = Dunya;
   const dokun = matchMedia('(pointer: coarse)').matches;
@@ -174,7 +174,7 @@ const Oyun = (() => {
 
   // ---------- Oyun kurulumu ----------
   function oyunTemizle() {
-    if (O) O.govdeler.forEach(c => { Sahne.karakterSil(c.K); Sahne.scene.remove(c.et); });
+    if (O) O.govdeler.forEach(c => { Sahne.karakterSil(c.K); Sahne.scene.remove(c.et); Sahne.temizle(c.et); });
     O = null;
     ['duelloPanel', 'tuzakSerit', 'izlePanel', 'rolYazi', 'nisangah', 'hizGosterge'].forEach(e => $(e).classList.add('gizli'));
     kontrolGoster(false);
@@ -190,7 +190,7 @@ const Oyun = (() => {
     tuzakSeridiKur();
   }
   function turKur(m) {
-    O.govdeler.forEach(c => { Sahne.karakterSil(c.K); Sahne.scene.remove(c.et); }); O.govdeler.clear();
+    O.govdeler.forEach(c => { Sahne.karakterSil(c.K); Sahne.scene.remove(c.et); Sahne.temizle(c.et); }); O.govdeler.clear();
     Object.assign(O, { tur: m.tur, toplamTur: m.toplamTur, firavun: m.firavun, t: m.t, sure: m.sure, akt: D.bosAkt(), hazirT: {}, olu: new Set(), vardi: new Set(), duello: null, faz: 'kosu', izle: null, oldumGitti: false, vardimGitti: false, sonGonder: 0, sonGeriSayi: null, adimT: 0 });
     if (m.puan) O.puan = m.puan;
     O.ben = null;
@@ -351,6 +351,7 @@ const Oyun = (() => {
         } else if (!ben) Sahne.duvarIzi(m.s[0], m.s[1], m.s[2]);
         break;
       }
+      case 'duelloBitti': O.duello = null; $('duelloPanel').classList.add('gizli'); break;
       case 'donus': {
         O.duello = null; $('duelloPanel').classList.add('gizli');
         const c = O.govdeler.get(m.f);
@@ -362,7 +363,7 @@ const Oyun = (() => {
       case 'turSonu': turSonu(m); break;
       case 'cikti': {
         O.cikti.add(m.no); akis(`🚪 ${ad(m.no)} oyundan çıktı`, 'kotu');
-        const c = O.govdeler.get(m.no); if (c) { Sahne.karakterSil(c.K); Sahne.scene.remove(c.et); O.govdeler.delete(m.no); }
+        const c = O.govdeler.get(m.no); if (c) { Sahne.karakterSil(c.K); Sahne.scene.remove(c.et); Sahne.temizle(c.et); O.govdeler.delete(m.no); }
         puanCiz(); break;
       }
       case 'son': oyunSonu(m); break;
@@ -627,7 +628,9 @@ const Oyun = (() => {
       // düelloda rakibin içinden geçilmez
       if (O.duello && (O.benNo === O.duello.k || O.benNo === O.duello.f)) { const rk = O.govdeler.get(O.benNo === O.duello.k ? O.duello.f : O.duello.k); if (rk) D.govdeIt(p, rk.s, ts, O.akt); }
     }
-    if (p.rol === 'kosucu' && !O.vardimGitti && p.x > D.VARIS_X) { O.vardimGitti = true; eve({ tip: 'vardim' }); }
+    if (p.rol === 'kosucu' && !O.vardimGitti && p.x > D.VARIS_X) { O.vardimGitti = true; O.vardimT = O.t; eve({ tip: 'vardim', x: +p.x.toFixed(2) }); }
+    // ev reddettiyse (ör. eski konumla karşılaştırdı) bir süre sonra yeniden dene
+    else if (O.vardimGitti && p.rol === 'kosucu' && !O.vardi.has(O.benNo) && !O.oldumGitti && p.x > D.VARIS_X && O.t - O.vardimT > 1.5) O.vardimGitti = false;
     // adım sesi + toz
     const hiz = Math.hypot(p.vx, p.vz);
     hizCiz(hiz, p);

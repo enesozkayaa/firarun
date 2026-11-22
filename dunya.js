@@ -373,19 +373,26 @@ const Dunya = (() => {
   function dugumPos(n, t, akt) { if (n.plat !== undefined) { const c = platMerkez(n.plat, t, akt, PMB); return { x: c.x, z: c.z, y: c.y, plat: n.plat }; } return n; }
   const sahte = { x: 0, y: 0, z: 0 };
   function noktaTehlike(x, y, z, t, akt) { sahte.x = x; sahte.y = y; sahte.z = z; return olumKontrol(sahte, t, akt); }
+  // [hız katı, ileri pay]: tam hız, biraz önü (balta menzile aniden girer), yavaş gidiş
+  const HIZ_KAT = [[1, 0], [1, 0.35], [0.75, 0]];
   // düz yürürsem önümüzdeki ~1 sn güvenli mi?
   function yolGuvenli(p, dx, dz, maxD, hiz, t, akt) {
-    for (const tau of [0, 0.15, 0.3, 0.5, 0.7, 0.95]) {
-      const d = Math.min(hiz * tau, maxD + 0.4);
-      const x = p.x + dx * d, z = p.z + dz * d;
-      let y = zeminY(x, z, p.y + 0.6, t + tau, akt);
-      if (y === -Infinity || y < p.y - 1.4) y = p.y;   // boşluk: atlama mantığı karar verir
-      if (noktaTehlike(x, y, z, t + tau, akt)) return false;
+    // sık örnekle: balta bir noktadan ~0.25 sn'de geçer, seyrek örnekte arada kalıp içine yürünüyordu
+    // gerçek hız tahminden düşük olabilir (hızlanma, sürtünme): iki hızla yokla
+    for (let tau = 0; tau <= 0.96; tau += tau < 0.6 ? 0.05 : 0.1) {
+      for (const [k, pay] of HIZ_KAT) {
+        const d = Math.min(hiz * k * tau + pay, maxD + 0.4);
+        const x = p.x + dx * d, z = p.z + dz * d;
+        let y = zeminY(x, z, p.y + 0.6, t + tau, akt);
+        if (y === -Infinity || y < p.y - 1.4) y = p.y;   // boşluk: atlama mantığı karar verir
+        if (noktaTehlike(x, y, z, t + tau, akt)) return false;
+        if (tau === 0) break;
+      }
     }
     return true;
   }
   function burasiGuvenli(p, t, akt, sure = 1.2) {
-    for (let tau = 0; tau <= sure; tau += 0.2) {
+    for (let tau = 0; tau <= sure; tau += 0.1) {
       let y = p.yerde ? zeminY(p.x, p.z, p.y + 0.3, t + tau, akt) : p.y;
       if (y === -Infinity) y = p.y - 3;
       if (noktaTehlike(p.x, y, p.z, t + tau, akt)) return false;
@@ -605,7 +612,8 @@ const Dunya = (() => {
     if (p.z > ARENA.z2 - 1.5 || p.z < ARENA.z1 + 1.5) { const ic = -Math.sign(p.z) * Math.cos(g.yaw); if (ic * g.yan < 0) { b.yanYon = -b.yanYon; g.yan = b.yanYon; } }
     if (p.yerde && Math.random() < 0.006) g.zipla = true;
     let ates = false;
-    if (t >= b.atesT) { ates = true; b.atesT = t + SILAH.bekle + 0.35 + Math.random() * 0.6; }
+    // ortalama ~2 sn'de bir (eskiden atışların yarısı motorda kayboluyordu; oyuncunun alıştığı hız korunuyor)
+    if (t >= b.atesT) { ates = true; b.atesT = t + SILAH.bekle + 1.1 + Math.random() * 1.2; }
     return { g, ates };
   }
   // bot ateşinin isabet ihtimali: zorluk, mesafe, hedefin hızı ve botun kendi hareketi
