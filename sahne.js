@@ -96,7 +96,8 @@ const Sahne = (() => {
     M.arenaZemin = S({ map: D_.zemin, roughness: 0.6, color: 0xd8c0a0 });
     M.kapak = S({ map: D_.kapak, roughness: 0.85 });
     M.tavan = S({ map: D_.tavan, roughness: 1 });
-    M.galeri = S({ map: D_.kumtasi, roughness: 0.9, color: 0xd8c8b0 });
+    M.galeri = S({ map: D_.zemin, roughness: 0.6, color: 0xe8d8b8 });
+    M.cam = new T.MeshStandardMaterial({ color: 0xbfe6ff, roughness: 0.05, metalness: 0.3, transparent: true, opacity: 0.16, depthWrite: false, side: T.DoubleSide });
     M.tas = S({ map: D_.kaya, roughness: 0.95, color: 0xc8a888 });
     M.sutunTas = S({ map: D_.kumtasi, roughness: 0.9, color: 0xe8d0b0 });
     M.sutun = S({ map: D_.hiyeroglif, roughness: 0.85 });
@@ -195,17 +196,17 @@ const Sahne = (() => {
     // bekleme salonu parmaklığı
     for (let z = -3.7; z <= 3.7; z += 0.6) g.add(ms(new T.CylinderGeometry(0.07, 0.07, 7, 6), M.altin, 248.5, 3.5, z));
     g.add(ms(kutuGeo(0.3, 0.3, 8), M.altin, 248.5, 6.9, 0)); g.add(ms(kutuGeo(0.3, 0.3, 8), M.altin, 248.5, 3, 0));
-    // galeri korkuluğu ve lotus sütunları
-    g.add(ms(new T.CylinderGeometry(0.06, 0.06, 260, 6).rotateZ(Math.PI / 2), M.altin, 116, 6.5, -4.12));
-    for (let x = -12; x < 246; x += 12) {
-      const s = ms(new T.CylinderGeometry(0.2, 0.24, 6.5, 10), M.sutunTas, x, 8.75, -4.12); g.add(s);
-      const tep = ms(new T.CylinderGeometry(0.55, 0.3, 0.6, 10), M.altin, x, 11.7, -4.12); g.add(tep);
-      for (let k = 2; k < 12; k += 2) g.add(ms(new T.CylinderGeometry(0.035, 0.035, 1, 4), M.altin, x + k, 6, -4.12));
-    }
-    // meşaleler
+    // Firavun'un cam kabini: altın çerçeveli cam paneller, altta ve üstte altın çıta
+    g.add(ms(kutuGeo(263, 0.12, 0.35), M.altin, 117.5, 1.26, -4.12));
+    g.add(ms(kutuGeo(263, 0.18, 0.3), M.altin, 117.5, 11.9, -4.12));
+    g.add(ms(kutuGeo(263, 0.08, 0.2), M.altin, 117.5, 6.4, -4.12));
+    for (let x = -14; x <= 249; x += 4) g.add(ms(kutuGeo(0.12, 10.8, 0.26), M.altin, x, 6.6, -4.12));
+    // camın iç yüzüne hafif parıltı şeridi (camı belli etmek için)
+    const parilti = new T.Mesh(new T.PlaneGeometry(263, 10.8), new T.MeshBasicMaterial({ map: tuval(256, 64, (x, w, h) => { const gr = x.createLinearGradient(0, 0, w, h); for (let i = 0; i < 8; i++) { gr.addColorStop(i / 8, 'rgba(255,255,255,0)'); gr.addColorStop(i / 8 + 0.03, 'rgba(255,255,255,0.18)'); gr.addColorStop(i / 8 + 0.06, 'rgba(255,255,255,0)'); } x.fillStyle = gr; x.fillRect(0, 0, w, h); }), transparent: true, depthWrite: false, blending: T.AdditiveBlending }));
+    parilti.material.map.repeat.set(20, 1); parilti.position.set(117.5, 6.6, -4.1); g.add(parilti);    // meşaleler
     for (let x = -10; x < 248; x += 9) {
-      meşaleEkle(g, x, 3.1, -3.85, 1); meşaleEkle(g, x + 4.5, 3.4, 3.85, -1);
-      meşaleEkle(g, x + 2, 8.4, -7.85, 1);
+      meşaleEkle(g, x + 4.5, 3.4, 3.85, -1);
+      meşaleEkle(g, x + 1, 4.2, -7.85, 1);
     }
     [[252, 4, -13.6, 1], [252, 4, 13.6, -1], [266, 4, -13.6, 1], [266, 4, 13.6, -1], [280.6, 4, -6, 0], [280.6, 4, 6, 0]].forEach(([x, y, z, s]) => meşaleEkle(g, x, y, z, s));
     for (let i = 0; i < 8; i++) { const l = new T.PointLight(0xff9a40, 0, 13, 1.7); scene.add(l); isikHavuzu.push(l); }
@@ -330,7 +331,7 @@ const Sahne = (() => {
       const o = new T.Mesh(new T.PlaneGeometry(16, 6).rotateX(-Math.PI / 2), new T.MeshStandardMaterial({ color: 0x2a1404, roughness: 0.05, metalness: 0.5, transparent: true, opacity: 0 }));
       o.position.set(126, 0.015, -1); g.add(o);
       // yağ kazanları (galeri altında)
-      for (const x of [119, 126, 133]) { g.add(ms(new T.CylinderGeometry(0.5, 0.4, 0.8, 12), M.bronz, x, 4.5, -3.7)); }
+      for (const x of [119, 126, 133]) { g.add(ms(new T.CylinderGeometry(0.5, 0.4, 0.8, 12), M.bronz, x, 4.5, 3.7)); }
       TZ.kaygan = { o };
     }
     // Ra'nın ışını: güneş diskleri + ışınlar
@@ -378,7 +379,7 @@ const Sahne = (() => {
     }
     // Firavun'un düğmeleri (galeride)
     dugmeler = D.TUZAKLAR.map(tz => {
-      const grp = new T.Group(); grp.position.set(tz.bx, D.GALERI_Y, -7.35);
+      const grp = new T.Group(); grp.position.set(tz.bx, D.GALERI_Y, -4.85);   // camın hemen önünde: Firavun koşuculara bakarak basar
       grp.add(ms(new T.CylinderGeometry(0.45, 0.55, 1.0, 12), M.sutunTas, 0, 0.5, 0));
       grp.add(ms(new T.CylinderGeometry(0.5, 0.5, 0.08, 16), M.altin, 0, 1.02, 0));
       const dm = new T.MeshStandardMaterial({ color: 0x30d060, emissive: 0x30d060, emissiveIntensity: 0.8, roughness: 0.3 });

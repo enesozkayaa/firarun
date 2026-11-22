@@ -5,7 +5,7 @@
 // =============================================================
 
 const Oyun = (() => {
-  const SURUM = 6;   // sw.js ONBELLEK numarasıyla aynı tut; oyuncular farklı sürümdeyse uyarı çıkar
+  const SURUM = 7;   // sw.js ONBELLEK numarasıyla aynı tut; oyuncular farklı sürümdeyse uyarı çıkar
   const $ = id => document.getElementById(id);
   const D = Dunya;
   const dokun = matchMedia('(pointer: coarse)').matches;
@@ -198,11 +198,11 @@ const Oyun = (() => {
       O.govdeler.set(no, { K, et, s, hedef: { x, y, z, yaw, vx: 0, vz: 0, anim: 1, zaman: performance.now() } });
       if (no === O.benNo) O.ben = D.yeniGovde(x, y, z, yaw, firavun ? 'firavun' : 'kosucu');
     }
-    kam.yaw = O.ben?.rol === 'firavun' ? 0.55 : 0; kam.pitch = O.ben?.rol === 'firavun' ? 0.5 : 0.22;
+    kam.yaw = O.ben?.rol === 'firavun' ? 0.7 : 0; kam.pitch = O.ben?.rol === 'firavun' ? 0.5 : 0.22;
     const benFiravun = O.benNo === O.firavun;
     $('fazYazi').textContent = `${O.tur}/${O.toplamTur}. tur · 🪬 ${ad(O.firavun)}`;
     $('rolYazi').classList.toggle('gizli', !O.ben);
-    $('rolYazi').innerHTML = benFiravun ? '🪬 Sen <b>FİRAVUN</b>sun: galeride yürü, düğmeye gelince <b>E</b>' : '🏃 Koşucusun: tuzaklardan kaç, sona var!';
+    $('rolYazi').innerHTML = benFiravun ? '🪬 Sen <b>FİRAVUN</b>sun: cam kabinde yürü, koşuculara bak, düğmeye gelince <b>E</b>' : '🏃 Koşucusun: tuzaklardan kaç, sona var!';
     $('tuzakSerit').classList.toggle('gizli', !benFiravun);
     $('duelloPanel').classList.add('gizli'); $('izlePanel').classList.add('gizli');
     $('turSonu').classList.add('gizli'); ekranGoster('hud');
@@ -250,7 +250,7 @@ const Oyun = (() => {
   function yakinTuzak() {
     if (!O?.ben || O.benNo !== O.firavun || O.duello) return null;
     let en = null, ed = 4.2;
-    D.TUZAKLAR.forEach(tz => { const d = Math.abs(O.ben.x - tz.bx); if (d < ed && O.ben.y > 4) { ed = d; en = tz; } });
+    D.TUZAKLAR.forEach(tz => { const d = Math.abs(O.ben.x - tz.bx); if (d < ed && O.ben.z < -4.2) { ed = d; en = tz; } });
     return en;
   }
   function tuzakBasDene(id) {

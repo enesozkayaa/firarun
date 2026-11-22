@@ -2,12 +2,12 @@
 // Firarun - dünya: piramit parkuru, fizik, tuzaklar ve botların aklı.
 // Hem tarayıcıda hem Node'da çalışır (motor testi için).
 // Eksenler: x = parkur boyunca ileri, y = yukarı, z = yan (koridor z -4..4).
-// Firavun parkurun sol üstündeki galeride yürür (y 5.5) ve düğmelere basar.
+// Firavun parkurun solundaki camlı kabinde yürür (biraz yüksekte, y 1.2) ve düğmelere basar; koşucular onu camın arkasında görür.
 // =============================================================
 
 const Dunya = (() => {
   const R = 0.38, BOY = 1.8, HIZ = 7, FIR_HIZ = 9, G = 24, ZIPLA = 8.4;
-  const GALERI_Y = 5.5, GALERI_Z = -6.2;
+  const GALERI_Y = 1.2, GALERI_Z = -6.4;
   const VARIS_X = 243.5;
   const LAV_Y = -1.2;
   const KAYA_R = 3.7;
@@ -116,17 +116,17 @@ const Dunya = (() => {
     // arena (Firavun'un mezar odası)
     ZEM(249.6, 281, -14, 14, 'arenaZemin');
     // sol duvar (galerinin altı) ve sağ duvar (girintiler hariç)
-    K(-14, 249, -10, 4.9, -4.6, -4, 'duvar');
+    K(-14, 249, -10, 1.2, -4.6, -4, 'duvar');                   // koridorun sol alt duvarı (cam kabinin altı)
     let x0 = -14;
     NISLER.forEach(a => { K(x0, a, -10, 12, 4, 6.8, 'duvar'); K(a, a + 2.5, -10, 12, 6.2, 6.8, 'duvar'); K(a, a + 2.5, 3.2, 12, 4, 6.2, 'duvar'); x0 = a + 2.5; });
     K(x0, 249, -10, 12, 4, 6.8, 'duvar');
     K(-14.6, -14, -10, 13, -8.6, 6.8, 'duvar');                 // arka duvar
     K(-14, 249, 12, 13, -8.6, 6.8, 'tavan');                     // tavan
     // galeri
-    K(-14, 246, 4.9, 5.5, -8, -4, 'galeri');
-    K(-14, 249, 5.5, 12, -8.6, -8, 'duvar');
-    K(-14, 246, 5.5, 12, -4.25, -4.0, 'gorunmez');               // galeri korkuluğu (aşağı atlanmaz)
-    K(246, 246.6, 5.5, 12, -8, -4, 'duvar');
+    K(-14, 246, 0.6, 1.2, -8, -4.25, 'galeri');                   // Firavun'un kabininin zemini
+    K(-14, 249, -10, 12, -8.6, -8, 'duvar');                    // kabinin arka duvarı
+    K(-14, 249, 1.2, 12, -4.25, -4.0, 'cam');                    // cam: herkes görür, kimse geçemez
+    K(246, 246.6, 1.2, 12, -8, -4.25, 'duvar');
     // bekleme salonu kapısı (parmaklık) ve arena duvarları
     K(248.2, 248.8, 0, 7, -4, 4, 'kapi');
     K(249, 249.6, -1, 14, -14.6, -4, 'duvar'); K(249, 249.6, -1, 14, 4, 14.6, 'duvar'); K(249, 249.6, 7, 14, -4, 4, 'duvar');
@@ -186,7 +186,7 @@ const Dunya = (() => {
     const dx = bx - ax, dy = by - ay, dz = bz - az;
     let en = 1;
     for (const b of yakinKutular(Math.min(ax, bx) - 1, Math.max(ax, bx) + 1, 0, { t: {}, n: {} }, TMP2)) {
-      if (b.m === 'gorunmez' || b.m === 'kapi' || b.m === 'kapak' || b.m === 'tas' || b.m === 'sal') continue;
+      if (b.m === 'gorunmez' || b.m === 'cam' || b.m === 'kapi' || b.m === 'kapak' || b.m === 'tas' || b.m === 'sal') continue;
       let t0 = 0, t1 = en;
       const eks = [[ax, dx, b.x1, b.x2], [ay, dy, b.y1, b.y2], [az, dz, b.z1, b.z2]];
       let ok = true;
@@ -206,7 +206,7 @@ const Dunya = (() => {
     const { x, y, z } = p;
     if (y < -2.5) return 'dustu';
     for (const L of LAV_CUKUR) if (x > L.x1 && x < L.x2 && z > L.z1 && z < L.z2 && y < LAV_Y + 0.5) return 'lav';
-    if (y > 4.6 || x > 236) return null;
+    if (z < -4.2 || x > 236) return null;
     if (x > 7 - R && x < 15 + R && y < 0.7 && dikenOlumcul(faz(akt, 0, t))) return 'diken';
     if (x > 57 && x < 73) {
       const f = faz(akt, 3, t);
@@ -255,7 +255,6 @@ const Dunya = (() => {
     p[e] += d;
     for (const b of kutular) {
       if (b._ig === igDamga) continue;
-      if (b.m === 'gorunmez' && p.rol !== 'firavun' && p.y < 4) continue;
       if (!(p.x + R > b.x1 && p.x - R < b.x2 && p.y + BOY > b.y1 && p.y < b.y2 && p.z + R > b.z1 && p.z - R < b.z2)) continue;
       if (e === 'y') {
         if (d <= 0) { p.y = b.y2; p.vy = 0; p.yerde = true; p.uzerinde = b; }
@@ -397,7 +396,7 @@ const Dunya = (() => {
       const calisan = TUZAKLAR.find(z => z.x1 - p.x > 0.3 && z.x1 - p.x < 4.5 && z.tur !== 'balta' && z.tur !== 'lazer' && faz(aktGercek, z.id, t - b.tepki * 0.5) < TUR_SURE[z.tur] + 0.1);
       if (calisan && b.kontrol) return g;
       const tz = TUZAKLAR.find(z => z.x1 - p.x > 0.5 && z.x1 - p.x < 4 && !b.bekledi[z.id]);
-      if (tz && ek.hazir(tz.id) && Math.abs(ek.f.x - tz.bx) < 7 && ek.f.y > 4) {
+      if (tz && ek.hazir(tz.id) && Math.abs(ek.f.x - tz.bx) < 7 && ek.f.z < -4.2) {
         if (b.bekleBas === null) { b.bekleBas = t; b.sabir = 1.5 + Math.random() * 6; }
         if (t - b.bekleBas < b.sabir) return g;
         b.bekledi[tz.id] = true; b.bekleBas = null;
