@@ -46,7 +46,7 @@ const Motor = (() => {
     const yerler = {};
     const kosucular = aktifler().filter(o => o.no !== fno);
     kosucular.forEach((o, i) => {
-      const sx = -11 + (i % 4) * 2.6, sz = -2.7 + Math.floor(i / 4) * 2.7 + (Math.random() - 0.5) * 0.4;
+      const sx = -9 + (i % 4) * 2.2, sz = -2.7 + Math.floor(i / 4) * 2.7 + (Math.random() - 0.5) * 0.4;
       yerler[o.no] = [sx, 0, sz, 0];
     });
     yerler[fno] = [-8, D.GALERI_Y, D.GALERI_Z, 0];

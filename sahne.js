@@ -482,7 +482,7 @@ const Sahne = (() => {
       govde.add(ms(kutuGeo(0.34, 0.62, 0.5, 1), gomlek, 0, 1.15, 0, true));
       govde.add(ms(kutuGeo(0.36, 0.08, 0.52, 1), M.kahve, 0, 0.88, 0));
       govde.add(ms(kutuGeo(0.22, 0.45, 0.38, 1), M.kahve, -0.27, 1.2, 0, true));
-      P.kolL = uzuv(0.12, 0.6, gomlek, 0, 1.43, -0.32, M.ten); P.kolR = uzuv(0.12, 0.6, gomlek, 0, 1.43, 0.32, M.ten);
+      P.kolL = uzuv(0.12, 0.62, gomlek, 0, 1.43, -0.32, M.ten, true); P.kolR = uzuv(0.12, 0.62, gomlek, 0, 1.43, 0.32, M.ten, true);
       govde.add(P.kolL.p, P.kolR.p);
       const bas = new T.Group(); bas.position.y = 1.62; govde.add(bas); P.bas = bas;
       bas.add(ms(new T.SphereGeometry(0.2, 14, 12), M.ten, 0, 0.05, 0, true));
@@ -498,7 +498,7 @@ const Sahne = (() => {
       govde.add(ms(new T.CylinderGeometry(0.42, 0.42, 0.1, 16, 1, false, -Math.PI / 2, Math.PI), M.altin, 0.03, 1.55, 0));
       govde.add(ms(kutuGeo(0.42, 0.14, 0.6, 1), M.altin, 0, 0.92, 0));
       govde.add(ms(kutuGeo(0.06, 0.45, 0.3, 1), new T.MeshStandardMaterial({ color: renk }), 0.2, 0.7, 0));
-      P.kolL = uzuv(0.13, 0.65, sargi, 0, 1.55, -0.36, M.altin); P.kolR = uzuv(0.13, 0.65, sargi, 0, 1.55, 0.36, M.altin);
+      P.kolL = uzuv(0.13, 0.66, sargi, 0, 1.55, -0.36, M.altin, true); P.kolR = uzuv(0.13, 0.66, sargi, 0, 1.55, 0.36, M.altin, true);
       govde.add(P.kolL.p, P.kolR.p);
       const bas = new T.Group(); bas.position.y = 1.78; govde.add(bas); P.bas = bas;
       bas.add(ms(new T.SphereGeometry(0.22, 14, 12), M.altin, 0, 0.05, 0, true));
@@ -516,39 +516,80 @@ const Sahne = (() => {
     asa.add(ms(new T.CylinderGeometry(0.035, 0.035, 1.5, 6), firavun ? M.altin : M.kahve, 0, 0, 0, true));
     if (firavun) { const k = ms(new T.TorusGeometry(0.13, 0.035, 6, 12, Math.PI), M.altin, 0.13, 0.75, 0); k.rotation.z = Math.PI; asa.add(k); }
     else asa.add(ms(new T.SphereGeometry(0.09, 8, 6), M.altin, 0, 0.75, 0));
-    asa.position.set(0.12, -0.55, 0); asa.rotation.z = -0.3;
+    asa.position.set(0.04, -0.02, 0); asa.rotation.z = -1.3;
     P.kolR.alt.add(asa); asa.visible = firavun;
     const gl = new T.Mesh(new T.CircleGeometry(0.45, 16).rotateX(-Math.PI / 2), new T.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.3, depthWrite: false })); gl.position.y = 0.02; g.add(gl);
     scene.add(g);
     return { g, govde, P, asa, firavun, faz: 0, salla: 0, golge: gl };
   }
-  function uzuv(r, boy, m, x, y, z, ucMat) {
+  // Uzuv: omuz/kalça (p) → üst parça → dirsek/diz (orta) → alt parça → el/ayak (alt)
+  function uzuv(r, boy, m, x, y, z, ucMat, kol = false) {
     const p = new T.Group(); p.position.set(x, y, z);
-    const ust = ms(kutuGeo(r * 1.6, boy, r * 1.6, 1), m, 0, -boy / 2, 0, true); p.add(ust);
-    const alt = new T.Group(); alt.position.y = -boy; p.add(alt);
-    alt.add(ms(kutuGeo(r * 1.7, r * 1.2, r * 1.9, 1), ucMat, r * 0.2, 0, 0, true));
-    return { p, alt };
+    const u = boy / 2;
+    p.add(ms(kutuGeo(r * 1.65, u + 0.04, r * 1.65, 1), m, 0, -u / 2, 0, true));
+    const orta = new T.Group(); orta.position.y = -u; p.add(orta);
+    orta.add(ms(new T.SphereGeometry(r * 0.85, 8, 6), m));
+    orta.add(ms(kutuGeo(r * 1.45, u, r * 1.45, 1), kol ? ucMat : m, 0, -u / 2, 0, true));
+    const alt = new T.Group(); alt.position.y = -u; orta.add(alt);
+    if (kol) alt.add(ms(new T.SphereGeometry(r * 0.95, 8, 6), ucMat, 0, -0.02, 0, true));
+    else alt.add(ms(kutuGeo(r * 2.1, r * 1.1, r * 1.6, 1), ucMat, r * 0.45, -r * 0.1, 0, true));
+    return { p, orta, alt };
   }
+  const yumusat = (o, eksen, hedef, k) => { o.rotation[eksen] += (hedef - o.rotation[eksen]) * k; };
   // s: { x, y, z, yaw, hiz, yerde, salla (0..1), duello }
+  // Koşu: kalça ileri-geri, diz geri bükülür (bacak öne gelirken), kollar ters yönde ve dirsekler kırık,
+  // gövde öne eğik ve hafif zıplar. Havada: çıkarken dizler karna çekilir, düşerken bacaklar açılır, kollar dengede.
   function karakterGuncelle(K, s, dt) {
     K.g.position.set(s.x, s.y, s.z);
     let fark = -s.yaw - K.g.rotation.y; while (fark > Math.PI) fark -= 2 * Math.PI; while (fark < -Math.PI) fark += 2 * Math.PI;
     K.g.rotation.y += fark * Math.min(1, dt * 14);
+    // dikey hız tahmini (havadayken çıkış / iniş pozu için)
+    const vy = K.oncekiY === undefined || dt <= 0 ? 0 : (s.y - K.oncekiY) / dt;
+    K.oncekiY = s.y; K.vy = (K.vy || 0) + (vy - (K.vy || 0)) * Math.min(1, dt * 12);
     const hiz = s.hiz || 0;
-    K.faz += dt * (4 + hiz * 1.4);
-    const sal = s.yerde ? Math.min(1, hiz / 5) : 0;
-    const a = Math.sin(K.faz) * 0.9 * sal;
-    const P = K.P;
-    if (s.yerde) { P.bacakL.p.rotation.z = a; P.bacakR.p.rotation.z = -a; P.kolL.p.rotation.z = -a * 0.8; P.kolR.p.rotation.z = a * 0.8; K.govde.position.y = Math.abs(Math.sin(K.faz)) * 0.06 * sal; }
-    else { P.bacakL.p.rotation.z = 0.6; P.bacakR.p.rotation.z = -0.3; P.kolL.p.rotation.z = -1.2; P.kolR.p.rotation.z = -1.2; K.govde.position.y = 0; }
-    P.kolL.p.rotation.x = s.yerde ? 0 : -0.5; P.kolR.p.rotation.x = s.yerde ? 0 : 0.5;
-    // asa savurma
-    if (s.salla > 0) { const k = 1 - s.salla; P.kolR.p.rotation.z = k < 0.35 ? -2.6 * (k / 0.35) : -2.6 + (k - 0.35) / 0.65 * 3.6; P.kolR.p.rotation.x = 0.4; }
-    else if (K.firavun && !s.duello) { P.kolR.p.rotation.z = -0.5; }
+    const P = K.P, k = 1 - Math.exp(-dt * 16);
+    let kalcaL, kalcaR, dizL, dizR, omuzL, omuzR, dirsekL, dirsekR, egil, sicra, yanKol = 0;
+    if (s.yerde) {
+      const sal = Math.min(1, hiz / 6.5);
+      K.faz += dt * (hiz > 0.3 ? 3.2 + hiz * 1.05 : 0);
+      const f = K.faz, sn = Math.sin(f), cs = Math.cos(f);
+      kalcaL = sn * 0.95 * sal; kalcaR = -sn * 0.95 * sal;
+      // diz: bacak öne savrulurken (kalça hızı +) çok bükülür, yere basarken az
+      dizL = -(0.12 + 1.35 * Math.max(0, cs)) * sal - 0.05; dizR = -(0.12 + 1.35 * Math.max(0, -cs)) * sal - 0.05;
+      omuzL = -sn * 0.85 * sal; omuzR = sn * 0.85 * sal;
+      dirsekL = 0.25 + 1.1 * sal + Math.max(0, -sn) * 0.3 * sal; dirsekR = 0.25 + 1.1 * sal + Math.max(0, sn) * 0.3 * sal;
+      egil = -0.16 * sal;
+      sicra = Math.abs(cs) * 0.09 * sal - 0.04 * sal;
+      if (hiz < 0.3) { const n = Math.sin(performance.now() / 600) * 0.03; omuzL = n; omuzR = -n; dirsekL = dirsekR = 0.15; sicra = 0; }
+    } else if (K.vy > 0.5) {
+      // yükselirken: ön diz karna, arka bacak geride bükük, kollar öne-yukarı
+      kalcaL = 1.25; dizL = -1.6; kalcaR = -0.25; dizR = -1.1;
+      omuzL = 0.9; omuzR = -0.5; dirsekL = 1.0; dirsekR = 0.9; yanKol = 0.25;
+      egil = -0.12; sicra = 0;
+    } else {
+      // düşerken: bacaklar inişe hazır, kollar yana açık (denge)
+      kalcaL = 0.55; dizL = -0.7; kalcaR = 0.1; dizR = -0.35;
+      omuzL = 0.35; omuzR = 0.2; dirsekL = 0.6; dirsekR = 0.6; yanKol = 0.75;
+      egil = -0.05; sicra = 0;
+    }
+    yumusat(P.bacakL.p, 'z', kalcaL, k); yumusat(P.bacakR.p, 'z', kalcaR, k);
+    yumusat(P.bacakL.orta, 'z', dizL, k); yumusat(P.bacakR.orta, 'z', dizR, k);
+    yumusat(P.kolL.p, 'z', omuzL, k); yumusat(P.kolL.orta, 'z', dirsekL, k);
+    yumusat(P.kolL.p, 'x', -yanKol, k); yumusat(P.kolR.p, 'x', yanKol, k);
+    // sağ kol: asa savurma ya da Firavun'un asayı tutuşu
+    if (s.salla > 0) {
+      const q = 1 - s.salla;
+      P.kolR.p.rotation.z = q < 0.35 ? lerpS(omuzR, 2.7, q / 0.35) : lerpS(2.7, -0.6, (q - 0.35) / 0.65);
+      P.kolR.orta.rotation.z = q < 0.35 ? 0.9 : 0.2; P.kolR.p.rotation.x = 0.35;
+    } else if (K.firavun && !s.duello && s.yerde && hiz < 3) { yumusat(P.kolR.p, 'z', 0.35, k); yumusat(P.kolR.orta, 'z', 1.2, k); }
+    else { yumusat(P.kolR.p, 'z', omuzR, k); yumusat(P.kolR.orta, 'z', dirsekR, k); }
+    K.govde.rotation.z += (egil - K.govde.rotation.z) * k;
+    K.govde.position.y += (sicra - K.govde.position.y) * k;
+    if (P.bas) P.bas.rotation.z = -K.govde.rotation.z * 0.6;
     K.asa.visible = K.firavun || !!s.duello;
     K.golge.position.y = 0.02;
   }
-  function karakterSil(K) { if (K) scene.remove(K.g); }
+  const lerpS = (a, b, t) => a + (b - a) * t;  function karakterSil(K) { if (K) scene.remove(K.g); }
 
   // ---------- Parçacıklar ----------
   const PN = 2400, sistemler = [];

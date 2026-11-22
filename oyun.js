@@ -5,7 +5,7 @@
 // =============================================================
 
 const Oyun = (() => {
-  const SURUM = 3;   // sw.js ONBELLEK numarasıyla aynı tut; oyuncular farklı sürümdeyse uyarı çıkar
+  const SURUM = 4;   // sw.js ONBELLEK numarasıyla aynı tut; oyuncular farklı sürümdeyse uyarı çıkar
   const $ = id => document.getElementById(id);
   const D = Dunya;
   const dokun = matchMedia('(pointer: coarse)').matches;
@@ -593,7 +593,7 @@ const Oyun = (() => {
   $('izleSerbestBtn').onclick = () => izleSerbest(O?.izle?.mod !== 'serbest');
 
   // ---------- Ana döngü ----------
-  let son = performance.now(), elleSur = false, menuT = 0, ipucuT = 0, seritT = 0;
+  let son = performance.now(), elleSur = 0, menuT = 0, ipucuT = 0, seritT = 0;
   function kare(dt) {
     if (O && O.faz !== 'son') {
       O.t += dt;
@@ -678,15 +678,16 @@ const Oyun = (() => {
   }
   function dongu(simdi) {
     const dt = Math.min(0.05, Math.max(0, (simdi - son) / 1000)); son = simdi;
-    if (!elleSur) kare(dt);
+    // test kapısı elle kare ilerletiyorsa bekle; yarım saniye çağrılmazsa oyun kendi kendine devam eder (asla donmaz)
+    if (!elleSur || simdi - elleSur > 500) { elleSur = 0; kare(dt); }
     requestAnimationFrame(dongu);
   }
   requestAnimationFrame(dongu);
 
   // Test kapısı: önizleme gizliyken kareyi elle ilerletmek ve durumu okumak için
   return {
-    kare(ms = 16, n = 1) { elleSur = true; for (let i = 0; i < n; i++) kare(ms / 1000); return Oyun.durum(); },
-    serbest() { elleSur = false; },
+    kare(ms = 16, n = 1) { elleSur = performance.now(); for (let i = 0; i < n; i++) kare(ms / 1000); return Oyun.durum(); },
+    serbest() { elleSur = 0; },
     durum() { return O ? { faz: O.faz, tur: O.tur, t: +O.t.toFixed(2), benNo: O.benNo, firavun: O.firavun, puan: O.puan, ben: O.ben && { x: +O.ben.x.toFixed(1), y: +O.ben.y.toFixed(1), z: +O.ben.z.toFixed(1), rol: O.ben.rol }, olu: [...O.olu], vardi: [...O.vardi], duello: O.duello } : { mod }; },
     otopilot(v = true) { otopilot = v ? {} : null; },
     tusBas(k, v = true) { if (v) tus.add(k); else tus.delete(k); },
