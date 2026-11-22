@@ -3,7 +3,7 @@
 // Oyunu gÃ¼ncelleyip yÃ¼klerken ONBELLEK numarasÄ±nÄ± 1 artÄ±r (oyun.js SURUM ile aynÄ±).
 // =============================================================
 
-const ONBELLEK = 'firarun-v1';
+const ONBELLEK = 'firarun-v2';
 const DOSYALAR = [
   './', 'index.html', 'style.css', 'dunya.js', 'motor.js', 'sahne.js', 'ag.js', 'ses.js', 'oyun.js',
   'manifest.webmanifest', 'ikonlar/ikon-192.png', 'ikonlar/ikon-512.png',

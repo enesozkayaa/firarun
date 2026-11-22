@@ -1,6 +1,6 @@
 {
-  "name": "FİRARUN",
-  "short_name": "Firarun",
+  "name": "FiraRun",
+  "short_name": "FiraRun",
   "description": "Piramidin tuzaklı koridorunu geç, Firavun'u düelloda yen!",
   "start_url": "./",
   "display": "standalone",
