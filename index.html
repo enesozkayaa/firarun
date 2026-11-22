@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <title>FİRARUN</title>
+  <meta name="description" content="FİRARUN: piramidin tuzaklarla dolu koridorunu koşup zıplayarak geç! Firavun galeriden düğmelere basıp seni durdurmaya çalışır. Botlarla ya da online arkadaşlarınla.">
+  <meta name="theme-color" content="#3a2210">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="ikonlar/ikon-192.png">
+  <link rel="apple-touch-icon" href="ikonlar/ikon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Lilita+One&family=Nunito:wght@600;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <canvas id="sahne"></canvas>
+
+  <!-- Giriş -->
+  <section id="giris" class="ekran">
+    <div class="kart">
+      <div class="logo" aria-label="FİRARUN"><span class="fira">FİRA</span><span class="run">RUN</span></div>
+      <div class="logoAlt">Firavun'un tuzaklarından firar et, koş!</div>
+      <p class="alt"><b>🏃 Koşucular</b> piramidin tuzaklı koridorunu baştan sona koşup zıplayarak geçmeye çalışır. <b>🪬 Firavun</b> yukarıdaki gizli galeride dolaşır ve düğmelere basıp tuzakları çalıştırır. Sona varan, Firavun'un mezar odasında onunla düello yapar!</p>
+      <label for="adim">Adın</label>
+      <input id="adim" maxlength="14" placeholder="Adın" autocomplete="off">
+      <button id="botlaBtn" class="ana">🤖 Botlarla oyna</button>
+      <button id="odaKurBtn" class="ikinci">🌐 Online oda aç</button>
+      <div class="satir">
+        <input id="odaKoduGir" maxlength="5" placeholder="ODA KODU" autocomplete="off" autocapitalize="characters">
+        <button id="katilBtn">Katıl</button>
+      </div>
+      <p id="girisDurum" class="durum"></p>
+      <details class="nasil">
+        <summary>📖 Nasıl oynanır?</summary>
+        <ul>
+          <li>2 ile 10 kişi. Tek başına botlarla ya da online odada (boş yerlere bot eklenebilir). Her turda biri <b>Firavun</b> olur, sırayla herkes bir kez (ya da iki kez) Firavun olur.</li>
+          <li>🏃 <b>Koşucu:</b> <b>W A S D</b> / oklar yürü, <b>Boşluk</b> zıpla. Sahneye tıklayınca fare kamerayı çevirir (<b>Esc</b> fareyi bırakır). <b>V</b>: birinci şahıs / üçüncü şahıs. Telefonda solda yürüme topu, sağ tarafı sürükleyince kamera döner.</li>
+          <li>🪬 <b>Firavun:</b> galeride yürür. Bir düğmenin yanına gelince <b>E</b> (ya da 👆 düğmesi) ile tuzağı çalıştırır. Düğme kırmızıysa doluyordur, biraz bekle.</li>
+          <li>🪤 <b>Tuzaklar:</b> 🦂 akrep dikenleri, 🕳️ çöken zemin, 🟫 batan taşlar, 🧱 ezen tavan, 🪨 yuvarlanan kaya (sağdaki girintilere saklan!), 🌋 yükselen lav (sütunlara çık!), 🛢️ yağlı zemin (lava kayma!), ☀️ Ra'nın ışını (üstünden zıpla!), 🪓 çılgın baltalar, 🌉 çöken köprü, 🛶 batan sallar, 🔥 Anubis alevi.</li>
+          <li>💡 <b>Taktik:</b> Tuzak çalışırken bekle; bitince dolması sürer, o arada koş! Firavun bir yerdeyken başka bir yerde olamaz.</li>
+          <li>⚔️ <b>Düello:</b> Sona varan ilk koşucu Firavun'un mezar odasına ışınlanır. İkisinin de elinde asa vardır: <b>tıkla</b> (ya da ⚔️) ile vur. 4 vuruş öldürür. Koşucu kazanırsa bütün koşucular kazanır; kaybederse sıradaki varan girer.</li>
+          <li>🏆 <b>Puan:</b> Firavun her öldürdüğü koşucu için +1, turu kazanırsa +3. Sona varan koşucu +1, Firavun'u yenen +3, koşucular kazanırsa her koşucu +2. Süre biterse Firavun kazanır.</li>
+          <li>👀 Ölünce diğerlerini izlersin: ◀ ▶ (Q / E) oyuncu değiştir, 🎥 (F) serbest bakış.</li>
+        </ul>
+      </details>
+    </div>
+  </section>
+
+  <!-- Bekleme odası -->
+  <section id="lobi" class="ekran gizli">
+    <div class="kart">
+      <h2 id="lobiBaslik">Bekleme odası</h2>
+      <div id="odaBilgi" class="kodKutu">Oda kodu: <b id="lobiKod">-----</b> <button id="kodKopyalaBtn" class="kucuk">Kopyala</button></div>
+      <ul id="lobiListe"></ul>
+      <button id="botEkleBtn" class="kucuk">➕ Bot ekle</button>
+      <div class="secimBaslik">🪬 Herkes kaç kez Firavun olsun?</div>
+      <div class="gorselSec" id="secKez">
+        <button data-v="1"><span class="buyukEm">🪬</span><small>1 kez</small></button>
+        <button data-v="2"><span class="buyukEm">🪬🪬</span><small>2 kez</small></button>
+      </div>
+      <div class="secimBaslik">⏳ Tur süresi</div>
+      <div class="gorselSec" id="secSure">
+        <button data-v="120"><span class="buyukEm">⌛</span><small>2 dk</small></button>
+        <button data-v="180"><span class="buyukEm">⌛⌛</span><small>3 dk</small></button>
+        <button data-v="240"><span class="buyukEm">⌛⌛⌛</span><small>4 dk</small></button>
+      </div>
+      <div class="secimBaslik">🔄 Tuzaklar ne kadar sürede dolsun?</div>
+      <div class="gorselSec" id="secBekleme">
+        <button data-v="kisa"><span class="buyukEm">⚡</span><small>Hızlı</small></button>
+        <button data-v="orta"><span class="buyukEm">🔄</span><small>Normal</small></button>
+        <button data-v="uzun"><span class="buyukEm">🐢</span><small>Yavaş</small></button>
+      </div>
+      <div id="satirZorluk">
+        <div class="secimBaslik">🤖 Bot zorluğu</div>
+        <div class="gorselSec" id="secZorluk">
+          <button data-v="kolay"><span class="buyukEm">😊</span><small>Kolay</small></button>
+          <button data-v="orta"><span class="buyukEm">😐</span><small>Orta</small></button>
+          <button data-v="zor"><span class="buyukEm">😈</span><small>Zor</small></button>
+        </div>
+      </div>
+      <p id="ayarOzet" class="durum"></p>
+      <div class="satir" id="lobiSatir">
+        <button id="lobiMikBtn">🎤 Mikrofon kapalı</button>
+        <button id="lobiCikBtn">🚪 Çık</button>
+      </div>
+      <button id="baslaBtn" class="ana">🏺 Oyunu başlat</button>
+      <p id="lobiDurum" class="durum"></p>
+      <p id="surumYazi" class="surum"></p>
+    </div>
+  </section>
+
+  <!-- Oyun ekranı -->
+  <div id="hud" class="gizli">
+    <div id="ustSol"><ol id="puanTablo"></ol></div>
+    <div id="ustOrta"><div id="fazYazi"></div><div id="sayac"></div><div id="ilerleme"><div id="ilerlemeCubuk"></div></div></div>
+    <div id="ustSag">
+      <button id="kameraBtn" title="Birinci / üçüncü şahıs (V)">👁️</button>
+      <button id="mikBtn" title="Mikrofon (M)">🎤</button>
+      <button id="sesBtn" title="Oyun sesi">🔊</button>
+      <button id="cikBtn" title="Oyundan çık">🚪</button>
+    </div>
+    <div id="akis"></div>
+    <div id="buyukYazi"></div>
+    <div id="rolYazi" class="gizli"></div>
+    <div id="nisangah" class="gizli"></div>
+    <div id="duelloPanel" class="gizli">
+      <div class="canSatir"><span id="dkAd"></span><div class="can"><div id="dkCan"></div></div></div>
+      <div class="vs">⚔️</div>
+      <div class="canSatir"><span id="dfAd"></span><div class="can firavunCan"><div id="dfCan"></div></div></div>
+    </div>
+    <div id="tuzakSerit" class="gizli"></div>
+    <div id="izlePanel" class="gizli"><button id="izleOnceBtn">◀</button><span id="izleAd"></span><button id="izleSonraBtn">▶</button><button id="izleSerbestBtn">🎥 Serbest bakış</button></div>
+    <div id="ipucu"></div>
+    <!-- Telefon kontrolleri -->
+    <div id="joystick" class="dokunmatik kontrol"><div id="joyTop"></div></div>
+    <div id="sagTuslar" class="dokunmatik kontrol">
+      <button id="eylemBtn" class="gizli2">👆</button>
+      <button id="ziplaBtn">⤒</button>
+    </div>
+  </div>
+
+  <!-- Tur sonu -->
+  <section id="turSonu" class="ekran saydam gizli">
+    <div class="kart">
+      <div id="turSonuBaslik" class="baslik kucukBaslik">TUR BİTTİ</div>
+      <p id="turSonuAlt2" class="alt merkez"></p>
+      <table id="turTablo"></table>
+      <p id="turSonuAlt" class="durum"></p>
+    </div>
+  </section>
+
+  <!-- Oyun sonu -->
+  <section id="sonuc" class="ekran saydam gizli">
+    <div class="kart">
+      <div id="sonucBaslik" class="baslik kucukBaslik">KAZANDIN!</div>
+      <ol id="sonucSira" class="sira"></ol>
+      <div class="satir">
+        <button id="lobiyeBtn">↩ Bekleme odası</button>
+        <button id="tekrarBtn" class="ana">🔁 Tekrar oyna</button>
+      </div>
+      <p id="sonucBekle" class="durum">Oda sahibi yeni oyunu başlatacak…</p>
+    </div>
+  </section>
+
+  <script src="https://cdn.jsdelivr.net/npm/three@0.159.0/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <script src="dunya.js"></script>
+  <script src="motor.js"></script>
+  <script src="sahne.js"></script>
+  <script src="ag.js"></script>
+  <script src="ses.js"></script>
+  <script src="oyun.js"></script>
+  <script>
+    // iPhone sayfayı kendi kendine büyütmesin (iki parmak / çift dokunma)
+    ['gesturestart', 'gesturechange', 'gestureend'].forEach(t => document.addEventListener(t, e => e.preventDefault(), { passive: false }));
+    document.addEventListener('touchmove', e => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
+    document.addEventListener('dblclick', e => e.preventDefault());
+    (function () {
+      const m = document.querySelector('meta[name=viewport]');
+      const ios = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      if (!m || !ios) return;
+      const asil = m.getAttribute('content');
+      function sifirla() {
+        m.setAttribute('content', 'width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover');
+        setTimeout(() => m.setAttribute('content', asil), 400);
+      }
+      document.addEventListener('focusout', e => { if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) setTimeout(sifirla, 50); });
+      window.addEventListener('orientationchange', () => setTimeout(sifirla, 300));
+      if (window.visualViewport) visualViewport.addEventListener('resize', () => {
+        const odak = document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName);
+        if (!odak && visualViewport.scale > 1.01) sifirla();
+      });
+    })();
+    if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js');
+  </script>
+</body>
+</html>

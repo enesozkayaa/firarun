@@ -1,0 +1,30 @@
+// =============================================================
+// Yol GeÃ§en HanÄ± - servis Ã§alÄ±ÅŸanÄ± (ana ekrana ekleme + Ã§evrimdÄ±ÅŸÄ± kopya)
+// Oyunu gÃ¼ncelleyip yÃ¼klerken ONBELLEK numarasÄ±nÄ± 1 artÄ±r (oyun.js SURUM ile aynÄ±).
+// =============================================================
+
+const ONBELLEK = 'firarun-v1';
+const DOSYALAR = [
+  './', 'index.html', 'style.css', 'dunya.js', 'motor.js', 'sahne.js', 'ag.js', 'ses.js', 'oyun.js',
+  'manifest.webmanifest', 'ikonlar/ikon-192.png', 'ikonlar/ikon-512.png',
+];
+
+self.addEventListener('install', olay => {
+  olay.waitUntil(caches.open(ONBELLEK).then(o => o.addAll(DOSYALAR.map(d => new Request(d, { cache: 'reload' })))));
+  self.skipWaiting();
+});
+self.addEventListener('activate', olay => {
+  olay.waitUntil(caches.keys().then(adlar => Promise.all(adlar.filter(a => a.startsWith('firarun-') && a !== ONBELLEK).map(a => caches.delete(a)))));
+  self.clients.claim();
+});
+// Ã–nce internet (en yeni sÃ¼rÃ¼m), olmazsa kayÄ±tlÄ± kopya
+self.addEventListener('fetch', olay => {
+  if (olay.request.method !== 'GET') return;
+  const url = new URL(olay.request.url), kapsam = new URL(self.registration.scope);
+  const ayniSite = url.origin === kapsam.origin && url.pathname.startsWith(kapsam.pathname);
+  olay.respondWith(
+    (ayniSite ? fetch(olay.request.url, { cache: 'no-cache' }) : fetch(olay.request))
+      .then(cevap => { if (cevap.ok && ayniSite) { const k = cevap.clone(); caches.open(ONBELLEK).then(o => o.put(olay.request, k)); } return cevap; })
+      .catch(() => caches.match(olay.request)),
+  );
+});

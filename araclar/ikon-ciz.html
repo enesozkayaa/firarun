@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<!--
+  Firarun - uygulama simgesi. Adres sonuna ?boyut=512 yazılır.
+  PNG için: msedge --headless=new --user-data-dir=<geçici klasör> --hide-scrollbars --window-size=512,512 --screenshot=ikonlar/ikon-512.png "file:///.../araclar/ikon-ciz.html?boyut=512"
+-->
+<html>
+<head>
+<meta charset="UTF-8">
+<style>html, body { margin: 0; background: #1a0e06; overflow: hidden; } canvas { display: block; }</style>
+</head>
+<body>
+<script>
+  const boyut = +(new URLSearchParams(location.search).get('boyut') || 512);
+  const c = document.createElement('canvas'); c.width = c.height = boyut; document.body.appendChild(c);
+  const g = c.getContext('2d'); g.scale(boyut / 512, boyut / 512);
+  // koridor: karanlık arka plan + perspektif duvarlar
+  const arka = g.createRadialGradient(256, 230, 20, 256, 256, 360); arka.addColorStop(0, '#ffb050'); arka.addColorStop(0.25, '#8a4a18'); arka.addColorStop(1, '#1a0c04');
+  g.fillStyle = arka; g.fillRect(0, 0, 512, 512);
+  g.fillStyle = '#b8864a'; g.beginPath(); g.moveTo(0, 0); g.lineTo(200, 170); g.lineTo(200, 300); g.lineTo(0, 512); g.fill();
+  g.beginPath(); g.moveTo(512, 0); g.lineTo(312, 170); g.lineTo(312, 300); g.lineTo(512, 512); g.fill();
+  g.fillStyle = '#7a5226'; g.beginPath(); g.moveTo(0, 512); g.lineTo(200, 300); g.lineTo(312, 300); g.lineTo(512, 512); g.fill();
+  // duvar taş çizgileri
+  g.strokeStyle = '#5a3816'; g.lineWidth = 4;
+  for (let i = 1; i < 6; i++) { const k = i / 6; g.beginPath(); g.moveTo(0, 512 * k * 0.9); g.lineTo(200, 170 + 130 * k); g.stroke(); g.beginPath(); g.moveTo(512, 512 * k * 0.9); g.lineTo(312, 170 + 130 * k); g.stroke(); }
+  // meşaleler
+  [[70, 170], [442, 170]].forEach(([x, y]) => {
+    const p = g.createRadialGradient(x, y, 0, x, y, 70); p.addColorStop(0, '#ffe080cc'); p.addColorStop(1, '#ff800000'); g.fillStyle = p; g.beginPath(); g.arc(x, y, 70, 0, 7); g.fill();
+    g.fillStyle = '#ffcc40'; g.beginPath(); g.moveTo(x, y - 34); g.quadraticCurveTo(x + 18, y, x, y + 10); g.quadraticCurveTo(x - 18, y, x, y - 34); g.fill();
+    g.fillStyle = '#5a3816'; g.fillRect(x - 8, y + 8, 16, 30);
+  });
+  // dikenler (yerde)
+  g.fillStyle = '#3a2a1a';
+  for (let i = 0; i < 9; i++) { const x = 120 + i * 34; g.beginPath(); g.moveTo(x - 12, 470); g.lineTo(x, 410); g.lineTo(x + 12, 470); g.fill(); }
+  g.fillStyle = '#8a7058'; for (let i = 0; i < 9; i++) { const x = 120 + i * 34; g.beginPath(); g.moveTo(x - 3, 450); g.lineTo(x, 412); g.lineTo(x + 2, 450); g.fill(); }
+  // altın Firavun maskesi (yukarıda)
+  g.save(); g.translate(256, 120);
+  g.fillStyle = '#1a3a9a'; g.beginPath(); g.moveTo(-70, -40); g.quadraticCurveTo(0, -95, 70, -40); g.lineTo(88, 70); g.lineTo(-88, 70); g.closePath(); g.fill();
+  g.fillStyle = '#f0c030'; for (let i = 0; i < 5; i++) { g.fillRect(-84 + i * 4, -20 + i * 18, 168 - i * 8, 8); }
+  g.fillStyle = '#f2c43a'; g.beginPath(); g.ellipse(0, 6, 44, 56, 0, 0, 7); g.fill();
+  g.fillStyle = '#1a1008'; g.beginPath(); g.ellipse(-17, -4, 10, 6, 0, 0, 7); g.fill(); g.beginPath(); g.ellipse(17, -4, 10, 6, 0, 0, 7); g.fill();
+  g.fillStyle = '#40e0ff'; g.beginPath(); g.arc(-17, -4, 3.5, 0, 7); g.fill(); g.beginPath(); g.arc(17, -4, 3.5, 0, 7); g.fill();
+  g.fillStyle = '#c89020'; g.fillRect(-4, 0, 8, 22); g.fillRect(-12, 34, 24, 5);
+  g.fillStyle = '#1a3a9a'; g.fillRect(-6, 54, 12, 26);
+  g.restore();
+  // koşan kaşif (ortada, büyük)
+  g.save(); g.translate(256, 320); g.rotate(-0.12);
+  g.strokeStyle = '#1a0c04'; g.lineCap = 'round'; g.lineWidth = 26;
+  g.beginPath(); g.moveTo(-6, 10); g.lineTo(-44, 50); g.lineTo(-74, 40); g.stroke();   // arka bacak
+  g.beginPath(); g.moveTo(6, 10); g.lineTo(40, 40); g.lineTo(34, 88); g.stroke();      // ön bacak
+  g.strokeStyle = '#d8402a'; g.lineWidth = 34; g.beginPath(); g.moveTo(0, 10); g.lineTo(14, -54); g.stroke(); // gövde
+  g.strokeStyle = '#e0b088'; g.lineWidth = 16;
+  g.beginPath(); g.moveTo(10, -44); g.lineTo(-30, -24); g.lineTo(-52, -44); g.stroke();
+  g.beginPath(); g.moveTo(14, -44); g.lineTo(48, -20); g.lineTo(66, -40); g.stroke();
+  g.fillStyle = '#e0b088'; g.beginPath(); g.arc(20, -86, 22, 0, 7); g.fill();
+  g.fillStyle = '#d8c08a'; g.beginPath(); g.ellipse(20, -100, 36, 9, -0.12, 0, 7); g.fill(); g.beginPath(); g.arc(20, -102, 22, Math.PI, 0); g.fill();
+  g.restore();
+  // hız çizgileri
+  g.strokeStyle = '#ffd04aaa'; g.lineWidth = 7; g.lineCap = 'round';
+  [[150, 260, 90], [140, 300, 70], [160, 340, 80]].forEach(([x, y, l]) => { g.beginPath(); g.moveTo(x - l, y); g.lineTo(x, y); g.stroke(); });
+  // çerçeve
+  g.strokeStyle = '#f0c030'; g.lineWidth = 14; g.strokeRect(7, 7, 498, 498);
+</script>
+</body>
+</html>
