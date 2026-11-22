@@ -5,7 +5,7 @@
 // =============================================================
 
 const Oyun = (() => {
-  const SURUM = 5;   // sw.js ONBELLEK numarasıyla aynı tut; oyuncular farklı sürümdeyse uyarı çıkar
+  const SURUM = 6;   // sw.js ONBELLEK numarasıyla aynı tut; oyuncular farklı sürümdeyse uyarı çıkar
   const $ = id => document.getElementById(id);
   const D = Dunya;
   const dokun = matchMedia('(pointer: coarse)').matches;
@@ -532,7 +532,12 @@ const Oyun = (() => {
     for (let i = 0; i < n; i++) {
       const ts = O.t - dt + h * (i + 1);
       const ol = D.adim(p, g, ts, h, O.akt);
-      if (!otopilot && Math.hypot(g.ileri, g.yan) > 0.1) p.yaw = kam.yaw + Math.atan2(g.yan, g.ileri);
+      // yüz yönü: yerde bastığın yöne; havada (bunnyhop) gerçekten gittiğin yöne bakar, A/D ile birden dönmez
+      if (!otopilot) {
+        p.yerdeT = p.yerde ? (p.yerdeT || 0) + h : 0;
+        if (p.yerde && p.yerdeT > 0.12 && Math.hypot(g.ileri, g.yan) > 0.1) p.yaw = kam.yaw + Math.atan2(g.yan, g.ileri);
+        else if ((!p.yerde || p.yerdeT <= 0.12) && Math.hypot(p.vx, p.vz) > 1) p.yaw = Math.atan2(p.vz, p.vx);
+      }
       ol.forEach(o => { if (o.tip === 'zipla') { Ses.zipla(); } else if (o.tip === 'indi') { Ses.indi(o.guc); if (o.guc > 9) Sahne.toz(p.x, p.y, p.z, 8, 0xc8a878, 1); } });
       g.zipla = false;
       if (p.rol === 'kosucu' && !(O.duello && O.duello.k === O.benNo) && !O.oldumGitti) {
