@@ -5,7 +5,7 @@
 // =============================================================
 
 const Oyun = (() => {
-  const SURUM = 4;   // sw.js ONBELLEK numarasıyla aynı tut; oyuncular farklı sürümdeyse uyarı çıkar
+  const SURUM = 5;   // sw.js ONBELLEK numarasıyla aynı tut; oyuncular farklı sürümdeyse uyarı çıkar
   const $ = id => document.getElementById(id);
   const D = Dunya;
   const dokun = matchMedia('(pointer: coarse)').matches;
@@ -171,7 +171,7 @@ const Oyun = (() => {
   function oyunTemizle() {
     if (O) O.govdeler.forEach(c => { Sahne.karakterSil(c.K); Sahne.scene.remove(c.et); });
     O = null;
-    ['duelloPanel', 'tuzakSerit', 'izlePanel', 'rolYazi', 'nisangah'].forEach(e => $(e).classList.add('gizli'));
+    ['duelloPanel', 'tuzakSerit', 'izlePanel', 'rolYazi', 'nisangah', 'hizGosterge'].forEach(e => $(e).classList.add('gizli'));
     kontrolGoster(false);
     $('akis').innerHTML = ''; $('ipucu').textContent = '';
     if (document.pointerLockElement) document.exitPointerLock?.();
@@ -304,7 +304,7 @@ const Oyun = (() => {
         if (c) { c.K.g.visible = false; c.et.visible = false; Sahne.ruh(c.s.x, c.s.y, c.s.z, m.neden); }
         Ses.olum(m.neden, c ? sesGucu(c.s.x, c.s.y, c.s.z) : 0.5);
         akis(`💀 ${ad(m.no)} ${NEDEN[m.neden] || ''}`, m.no === O.benNo ? 'kotu' : '');
-        if (m.no === O.benNo) { O.olumYeri = c ? { x: c.s.x, y: c.s.y, z: c.s.z } : null; O.ben = null; kontrolGoster(false); $('rolYazi').classList.add('gizli'); buyuk('💀 ÖLDÜN!', NEDEN[m.neden] || '', 2200); setTimeout(() => { if (O && !O.ben) izlemeyeBasla(); }, 1800); }
+        if (m.no === O.benNo) { O.olumYeri = c ? { x: c.s.x, y: c.s.y, z: c.s.z } : null; O.ben = null; kontrolGoster(false); $('rolYazi').classList.add('gizli'); $('hizGosterge').classList.add('gizli'); sonHizGoster = false; buyuk('💀 ÖLDÜN!', NEDEN[m.neden] || '', 2200); setTimeout(() => { if (O && !O.ben) izlemeyeBasla(); }, 1800); }
         else if (O.benNo === O.firavun && m.neden !== 'cikti') buyuk('+1', `${ad(m.no)} ${NEDEN[m.neden] || ''}`, 1100);
         puanCiz();
         break;
@@ -544,6 +544,7 @@ const Oyun = (() => {
     if (p.rol === 'kosucu' && !O.vardimGitti && p.x > D.VARIS_X) { O.vardimGitti = true; eve({ tip: 'vardim' }); }
     // adım sesi + toz
     const hiz = Math.hypot(p.vx, p.vz);
+    hizCiz(hiz, p);
     if (p.yerde && hiz > 2) { O.adimT -= dt * hiz / 7; if (O.adimT <= 0) { O.adimT = 0.33; Ses.adim(); Sahne.ayakTozu(p.x, p.y, p.z); } }
     if (p.kaygan && Math.random() < 0.3) Sahne.parcacik(0, { x: p.x, y: p.y + 0.05, z: p.z, vz: 1, renk: 0x2a1404, boy: 0.4, omur: 0.5 });
     // konum gönder
@@ -552,6 +553,15 @@ const Oyun = (() => {
       const anim = (p.yerde ? 1 : 0) | (hiz > 1 ? 2 : 0);
       eve({ tip: 'ben', d: [+p.x.toFixed(2), +p.y.toFixed(2), +p.z.toFixed(2), +p.yaw.toFixed(2), anim, +p.vx.toFixed(1), +p.vz.toFixed(1)] });
     }
+  }
+
+  // bunnyhop: normal koşu hızının üstündeyken hız göstergesi
+  let sonHizGoster = false;
+  function hizCiz(hiz, p) {
+    const normal = p.rol === 'firavun' ? D.FIR_HIZ : D.HIZ;
+    const goster = hiz > normal + 0.4;
+    if (goster) { const e = $('hizGosterge'); e.textContent = `🐇 ${Math.round(hiz * 3.6)} km/s ×${(hiz / normal).toFixed(1)}`; e.classList.toggle('cok', hiz > normal * 1.5); }
+    if (goster !== sonHizGoster) { sonHizGoster = goster; $('hizGosterge').classList.toggle('gizli', !goster); }
   }
 
   // ---------- Ölünce: izleme ----------

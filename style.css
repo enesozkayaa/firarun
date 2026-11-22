@@ -143,3 +143,8 @@ body.dokun .kontrol.gizli2, .gizli2 { display: none !important; }
 .logo .fira { margin-right: 6px; }
 .logo .run::after { content: ''; position: absolute; left: -10%; right: 4%; bottom: -8px; height: 6px; border-radius: 3px; background: linear-gradient(90deg, transparent, #ff7a2a 40%, #ffd04a); -webkit-text-fill-color: initial; }
 .logoAlt { text-align: center; font-weight: 900; font-size: 14px; color: #8a4a10; margin-top: 8px; }
+
+/* Bunnyhop hız göstergesi */
+#hizGosterge { position: absolute; left: 50%; bottom: calc(max(10px, env(safe-area-inset-bottom)) + 34px); transform: translateX(-50%); font-family: 'Lilita One', sans-serif; font-size: 22px; color: #ffd84a; background: #000a; padding: 2px 14px; border-radius: 12px; border: 2px solid var(--hr, #ffd84a); transition: transform .1s; white-space: nowrap; }
+#hizGosterge.cok { color: #ff7a3a; transform: translateX(-50%) scale(1.12); }
+body.dokun #hizGosterge { bottom: auto; top: 46%; font-size: 16px; }

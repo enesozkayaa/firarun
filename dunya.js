@@ -11,6 +11,7 @@ const Dunya = (() => {
   const VARIS_X = 243.5;
   const LAV_Y = -1.2;
   const KAYA_R = 3.7;
+  const BHOP_SINIR = 1.1, BHOP_IVME = 12, BHOP_AZAMI = 1.85;   // havada yön başına hız sınırı, hava ivmesi, en yüksek hız katı
   const BALTA_PIVOT = 11, BALTA_L = 9.4;
   const DUELLO = { k: [253, 0, 0, 0], f: [276, 0, 0, Math.PI] };
   const ARENA = { x1: 249.6, x2: 281, z1: -14, z2: 14 };
@@ -275,9 +276,25 @@ const Dunya = (() => {
     const l = Math.hypot(ix, iz); if (l > 1) { ix /= l; iz /= l; }
     const ze = p.yerde ? zeminEtkisi(p, t, akt) : null;
     p.kaygan = !!ze;
-    const k = p.yerde ? (ze ? 1.0 : 14) : 3.5;
-    const a = Math.min(1, k * dt);
-    p.vx += (ix * hiz - p.vx) * a; p.vz += (iz * hiz - p.vz) * a;
+    const yatayHiz = Math.hypot(p.vx, p.vz);
+    const ziplayacak = g.zipla && (p.yerde || p.havaT < 0.1) && p.vy <= 0.5;
+    if (p.yerde && !(ziplayacak && yatayHiz > hiz)) {
+      // yerde: istenen hıza hızla yaklaş (sürtünme). Bunnyhop: yere değdiği an zıplarsa sürtünme yok, hız korunur.
+      const a = Math.min(1, (ze ? 1.0 : 14) * dt);
+      p.vx += (ix * hiz - p.vx) * a; p.vz += (iz * hiz - p.vz) * a;
+    } else if (!p.yerde) {
+      // havada (CS tarzı): istenen yöne, o yöndeki hız küçük bir sınırı geçmeyecek kadar ivme eklenir.
+      // Havada yana basıp fareyle o yöne dönünce hız birikir (bunnyhop). Normal hızın altındayken eski kolay hava kontrolü de var.
+      const il = Math.hypot(ix, iz);
+      if (il > 0.01) {
+        const wx = ix / il, wz = iz / il, simdiki = p.vx * wx + p.vz * wz;
+        const ekle = Math.min(BHOP_SINIR * il - simdiki, BHOP_IVME * hiz * il * dt);
+        if (ekle > 0) { p.vx += wx * ekle; p.vz += wz * ekle; }
+      }
+      if (yatayHiz <= hiz + 0.05 && Math.abs(g.ileri || 0) > 0.1) { const a = Math.min(1, 3.5 * dt); p.vx += (ix * hiz - p.vx) * a; p.vz += (iz * hiz - p.vz) * a; }
+      const yeni = Math.hypot(p.vx, p.vz), azami = hiz * BHOP_AZAMI;
+      if (yeni > azami) { p.vx *= azami / yeni; p.vz *= azami / yeni; }
+    }
     if (ze) p.vz += ze.itme * dt;
     if (p.yerde) p.havaT = 0; else p.havaT += dt;
     if (g.zipla && (p.yerde || p.havaT < 0.1) && p.vy <= 0.5) { p.vy = ZIPLA; p.yerde = false; p.havaT = 1; ol.push({ tip: 'zipla' }); }
