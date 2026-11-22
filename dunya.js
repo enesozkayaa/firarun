@@ -152,10 +152,10 @@ const Dunya = (() => {
     const y = tasY(i, t, akt);
     return kopyala(this.b, x - TAS_YARI, x + TAS_YARI, y - 6, y, z - TAS_YARI, z + TAS_YARI, 'tas');
   }, { tip: 'tas', i, x, z }));
-  const PM = {};
+  const PM = {}, PMT = {};
   PLATFORMLAR.forEach(([x], i) => D(x - 1.5, x + 1.5, function (t, akt) {
     const c = platMerkez(i, t, akt, PM);
-    return kopyala(this.b, x - 1.5, x + 1.5, c.y - 0.6, c.y, c.z - 1.5, c.z + 1.5, 'sal', c.vz);
+    const b = kopyala(this.b, x - 1.5, x + 1.5, c.y - 0.6, c.y, c.z - 1.5, c.z + 1.5, 'sal', c.vz); b.salNo = i; return b;
   }, { tip: 'sal', i }));
 
   // ---------- Kutu sorguları ----------
@@ -298,7 +298,12 @@ const Dunya = (() => {
     if (p.yerde) p.havaT = 0; else p.havaT += dt;
     if (g.zipla && (p.yerde || p.havaT < 0.1) && p.vy <= 0.5) { p.vy = ZIPLA; p.yerde = false; p.havaT = 1; ol.push({ tip: 'zipla' }); }
     p.vy = Math.max(-30, p.vy - G * dt);
-    if (p.yerde && p.uzerinde && p.uzerinde.vz) p.z += p.uzerinde.vz * dt;
+    // üstünde durduğun sal seni taşır: salın bu adımdaki gerçek yer değiştirmesi kadar (saat düzeltmelerinde de kaymaz)
+    if (p.yerde && p.uzerinde && p.uzerinde.salNo !== undefined) {
+      const c = platMerkez(p.uzerinde.salNo, t, akt, PMT);
+      if (p.salNo === p.uzerinde.salNo && Math.abs(c.z - p.salZ) < 1) p.z += c.z - p.salZ;
+      p.salNo = p.uzerinde.salNo; p.salZ = c.z;
+    } else if (!p.yerde || !p.uzerinde) { if (p.havaT > 0.15) p.salNo = undefined; }
     const kutular = yakinKutular(p.x - 3, p.x + 3, t, akt, TMP);
     // içine girdiğimiz kutu (yükselen taş vb.) bizi yukarı iter; derinse yok sayılır
     igDamga++;

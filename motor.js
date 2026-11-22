@@ -27,7 +27,8 @@ const Motor = (() => {
     };
     yay({ tip: 'basla', oyuncular: M.oyuncular.map(o => ({ no: o.no, id: o.id, ad: o.ad, bot: !!o.bot, renk: o.renk })), ayar, toplamTur: M.toplamTur });
     turBaslat();
-    if (!cikis.elle) sayac = setInterval(() => tik(1 / 30), 1000 / 30);
+    // gerçek saate göre ilerle (zamanlayıcı gecikse de oyun saati oyuncularınkiyle aynı kalsın)
+    if (!cikis.elle) { let son = Date.now(); sayac = setInterval(() => { const simdi = Date.now(), dt = Math.min(0.1, (simdi - son) / 1000); son = simdi; if (dt > 0) tik(dt); }, 1000 / 30); }
   }
   function durdur() { clearInterval(sayac); sayac = null; M = null; }
   const puanlar = () => Object.fromEntries(M.oyuncular.map(o => [o.no, o.puan]));
