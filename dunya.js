@@ -11,7 +11,7 @@ const Dunya = (() => {
   const VARIS_X = 243.5;
   const LAV_Y = -1.2;
   const KAYA_R = 3.7;
-  const BHOP_SINIR = 1.1, BHOP_IVME = 12, BHOP_AZAMI = 1.85;   // havada yön başına hız sınırı, hava ivmesi, en yüksek hız katı
+  const BHOP_SINIR = 1.1, BHOP_IVME = 12;   // havada yön başına hız sınırı, hava ivmesi (bunnyhop'ta üst hız sınırı yok)
   const BALTA_PIVOT = 11, BALTA_L = 9.4;
   const DUELLO = { k: [253, 0, 0, 0], f: [276, 0, 0, Math.PI] };
   const ARENA = { x1: 249.6, x2: 281, z1: -14, z2: 14 };
@@ -322,8 +322,6 @@ const Dunya = (() => {
         if (ekle > 0) { p.vx += wx * ekle; p.vz += wz * ekle; }
       }
       if (yatayHiz <= hiz + 0.05 && Math.abs(g.ileri || 0) > 0.1) { const a = Math.min(1, 3.5 * dt); p.vx += (ix * hiz - p.vx) * a; p.vz += (iz * hiz - p.vz) * a; }
-      const yeni = Math.hypot(p.vx, p.vz), azami = hiz * BHOP_AZAMI;
-      if (yeni > azami) { p.vx *= azami / yeni; p.vz *= azami / yeni; }
     }
     if (ze) p.vz += ze.itme * dt;
     if (p.yerde) p.havaT = 0; else p.havaT += dt;
@@ -335,7 +333,8 @@ const Dunya = (() => {
       if (p.salNo === p.uzerinde.salNo && Math.abs(c.z - p.salZ) < 1) p.z += c.z - p.salZ;
       p.salNo = p.uzerinde.salNo; p.salZ = c.z;
     } else if (!p.yerde || !p.uzerinde) { if (p.havaT > 0.15) p.salNo = undefined; }
-    const kutular = yakinKutular(p.x - 3, p.x + 3, t, akt, TMP);
+    const menzil = 3 + Math.abs(p.vx) * dt;
+    const kutular = yakinKutular(p.x - menzil, p.x + menzil, t, akt, TMP);
     // içine girdiğimiz kutu (yükselen taş vb.) bizi yukarı iter; derinse yok sayılır
     igDamga++;
     for (const b of kutular) {
@@ -346,8 +345,12 @@ const Dunya = (() => {
     }
     const eskiYerde = p.yerde, vyOnce = p.vy;
     p.yerde = false; p.uzerinde = null;
-    eksen(p, kutular, 'x', p.vx * dt, eskiYerde);
-    eksen(p, kutular, 'z', p.vz * dt, eskiYerde);
+    // çok hızlıyken duvarın içinden geçmemek için yatay hareketi küçük parçalara böl
+    const parca = Math.max(1, Math.ceil(Math.max(Math.abs(p.vx), Math.abs(p.vz)) * dt / 0.2));
+    for (let i = 0; i < parca; i++) {
+      eksen(p, kutular, 'x', p.vx * dt / parca, eskiYerde);
+      eksen(p, kutular, 'z', p.vz * dt / parca, eskiYerde);
+    }
     eksen(p, kutular, 'y', p.vy * dt, eskiYerde);
     if (p.yerde && !eskiYerde && vyOnce < -5) ol.push({ tip: 'indi', guc: -vyOnce });
     if (Math.hypot(ix, iz) > 0.1) p.yaw = Math.atan2(iz, ix);
