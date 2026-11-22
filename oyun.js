@@ -5,7 +5,7 @@
 // =============================================================
 
 const Oyun = (() => {
-  const SURUM = 2;   // sw.js ONBELLEK numarasıyla aynı tut; oyuncular farklı sürümdeyse uyarı çıkar
+  const SURUM = 3;   // sw.js ONBELLEK numarasıyla aynı tut; oyuncular farklı sürümdeyse uyarı çıkar
   const $ = id => document.getElementById(id);
   const D = Dunya;
   const dokun = matchMedia('(pointer: coarse)').matches;
@@ -468,11 +468,12 @@ const Oyun = (() => {
   kanvas.addEventListener('contextmenu', e => e.preventDefault());
   document.addEventListener('mousemove', e => { if (document.pointerLockElement === kanvas && oyunda()) kameraCevir(e.movementX, e.movementY, 0.9); });
   document.addEventListener('pointerlockchange', () => { if (O && O.faz === 'kosu') ipucuCiz(); });
-  kanvas.addEventListener('wheel', e => { if (O?.izle?.mod === 'serbest') { e.preventDefault(); O.izle.uzak = Math.max(4, Math.min(60, O.izle.uzak * (e.deltaY > 0 ? 1.12 : 0.89))); } }, { passive: false });
+  kanvas.addEventListener('wheel', e => { const I = O?.izle; if (I?.mod === 'serbest' && I.poz) { e.preventDefault(); const k = e.deltaY > 0 ? -1.5 : 1.5, cp = Math.cos(I.pitch); I.poz.x += Math.cos(I.yaw) * cp * k; I.poz.y -= Math.sin(I.pitch) * k; I.poz.z += Math.sin(I.yaw) * cp * k; } }, { passive: false });
   function kameraCevir(dx, dy, k = 1) {
     const hedef = O?.izle?.mod === 'serbest' ? O.izle : kam;
     hedef.yaw += dx * 0.0042 * k;
-    hedef.pitch = Math.max(kam.birinci && hedef === kam ? -1.35 : -0.5, Math.min(1.3, hedef.pitch + dy * 0.0036 * k));
+    const serbest = hedef !== kam;
+    hedef.pitch = Math.max(serbest || kam.birinci ? -1.45 : -0.5, Math.min(serbest ? 1.45 : 1.3, hedef.pitch + dy * 0.0036 * k));
   }
   // joystick
   const J = $('joystick'), JT = $('joyTop');
@@ -513,7 +514,7 @@ const Oyun = (() => {
   }
   function ipucuCiz() {
     if (!O || dokun) { $('ipucu').textContent = ''; return; }
-    if (!O.ben) { $('ipucu').textContent = O.izle ? '◀ ▶ (Q / E): başka oyuncuyu izle · F: serbest bakış · fareyle sürükle: döndür' : ''; return; }
+    if (!O.ben) { $('ipucu').textContent = O.izle ? (O.izle.mod === 'serbest' ? 'Fareyle bak · W baktığın yöne git · A D yana · Boşluk yukarı · Shift aşağı · F: oyuncuyu izle' : '◀ ▶ (Q / E): başka oyuncuyu izle · F: serbest bakış · fareyle sürükle: döndür') : ''; return; }
     const kilit = document.pointerLockElement === kanvas;
     const fare = kilit ? 'Esc: fareyi bırak' : 'Sahneye tıkla: fareyle bak';
     if (O.duello && (O.benNo === O.duello.k || O.benNo === O.duello.f)) $('ipucu').textContent = `WASD yürü · Boşluk zıpla · Tıkla / E: asayla vur · ${fare}`;
@@ -577,8 +578,9 @@ const Oyun = (() => {
   function izleSerbest(ac) {
     if (!O?.izle) return;
     O.izle.mod = ac ? 'serbest' : 'oyuncu';
-    if (ac) { const c = O.govdeler.get(O.izle.no); O.izle.odak = c ? { x: c.s.x, y: c.s.y + 1, z: c.s.z } : { x: 20, y: 1, z: 0 }; O.izle.yaw = kam.yaw; O.izle.pitch = 0.6; }
+    if (ac) { const p = Sahne.camera.position; O.izle.poz = { x: p.x, y: p.y, z: p.z }; O.izle.yaw = kam.yaw; O.izle.pitch = 0.25; }
     else izleDegistir(0);
+    $('joystick').classList.toggle('gizli2', !ac);
     izlePanelCiz();
   }
   function izlePanelCiz() {
@@ -629,11 +631,17 @@ const Oyun = (() => {
       if (O.ben) Sahne.kameraTakip(O.ben, kam.yaw, kam.pitch, kam.birinci);
       else if (O.izle) {
         if (O.izle.mod === 'serbest') {
+          // uçan kamera: W baktığın yöne (aşağı bakıyorsan aşağı) götürür, A/D yana, Boşluk yukarı, Shift aşağı
           const I = O.izle, v = k => tus.has(k), hz = 14 * dt;
-          const ileri = (v('w') || v('arrowup') ? 1 : 0) - (v('s') || v('arrowdown') ? 1 : 0), yan = (v('d') || v('arrowright') ? 1 : 0) - (v('a') || v('arrowleft') ? 1 : 0);
-          I.odak.x += (Math.cos(I.yaw) * ileri - Math.sin(I.yaw) * yan) * hz; I.odak.z += (Math.sin(I.yaw) * ileri + Math.cos(I.yaw) * yan) * hz;
-          I.odak.x = Math.max(-12, Math.min(280, I.odak.x)); I.odak.z = Math.max(-12, Math.min(12, I.odak.z));
-          Sahne.kameraSerbest(I.odak, I.yaw, I.pitch, I.uzak);
+          let ileri = (v('w') || v('arrowup') ? 1 : 0) - (v('s') || v('arrowdown') ? 1 : 0), yan = (v('d') || v('arrowright') ? 1 : 0) - (v('a') || v('arrowleft') ? 1 : 0);
+          if (joy.id !== null) { ileri = -joy.y; yan = joy.x; }
+          const yuk = (v(' ') ? 1 : 0) - (v('shift') ? 1 : 0);
+          const cp = Math.cos(I.pitch), fx = Math.cos(I.yaw) * cp, fy = -Math.sin(I.pitch), fz = Math.sin(I.yaw) * cp;
+          I.poz.x += (fx * ileri - Math.sin(I.yaw) * yan) * hz;
+          I.poz.y += (fy * ileri + yuk) * hz;
+          I.poz.z += (fz * ileri + Math.cos(I.yaw) * yan) * hz;
+          I.poz.x = Math.max(-13.5, Math.min(280.5, I.poz.x)); I.poz.y = Math.max(0.3, Math.min(13.5, I.poz.y)); I.poz.z = Math.max(-13.5, Math.min(13.5, I.poz.z));
+          Sahne.kameraUcan(I.poz, I.yaw, I.pitch);
         } else {
           let c = O.govdeler.get(O.izle.no);
           if (!c || O.olu.has(O.izle.no)) { izleDegistir(0); c = O.govdeler.get(O.izle.no); }

@@ -648,6 +648,13 @@ const Sahne = (() => {
     kam.bx = odak.x; kam.by = odak.y; kam.bz = odak.z;
     kam.ani = false;
   }
+  // uçan kamera: poz'da durur, baktığı yöne (yaw, pitch) bakar
+  function kameraUcan(poz, yaw, pitch) {
+    const cp = Math.cos(pitch);
+    kam.x = poz.x; kam.y = poz.y; kam.z = poz.z;
+    kam.bx = poz.x + Math.cos(yaw) * cp; kam.by = poz.y - Math.sin(pitch); kam.bz = poz.z + Math.sin(yaw) * cp;
+    kam.ani = false;
+  }
   function menuKamera(t) {
     const x = ((t * 3.2) % 270) - 12;
     kam.x = x; kam.y = 3 + Math.sin(t * 0.3) * 1.2; kam.z = Math.sin(t * 0.2) * 2;
@@ -688,7 +695,7 @@ const Sahne = (() => {
 
   return {
     RENKLER, kur, ciz, karakterYap, karakterGuncelle, karakterSil, etiketYap, tuzakGuncelle,
-    kameraTakip, kameraSerbest, menuKamera,
+    kameraTakip, kameraSerbest, kameraUcan, menuKamera,
     toz, kivilcim, lavSicra, ruh, konfeti, vurusEfekt, sarsinti, ayakTozu, duelloHalkasi, parcacik,
     dugmeVurgula(id) { dugmeVurgu = id; },
     get scene() { return scene; }, get camera() { return camera; }, get renderer() { return renderer; },
