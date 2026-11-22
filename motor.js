@@ -8,7 +8,7 @@
 
 const Motor = (() => {
   const D = typeof Dunya !== 'undefined' ? Dunya : require('./dunya.js');
-  const GERI_SAYIM = 5, TUR_SONU_SURE = 7, DUELLO_HAZIR = 2.5, CAN = 100, HASAR = 25, SALLA_BEKLE = 0.7, SALLA_VURUS = 0.25;
+  const GERI_SAYIM = 5, DOGUS_SURE = 3, TUR_SONU_SURE = 7, DUELLO_HAZIR = 2.5, CAN = 100, HASAR = 25, SALLA_BEKLE = 0.7, SALLA_VURUS = 0.25;
   let M = null, cikisFn = null, sayac = null;
   const yay = m => cikisFn && cikisFn.herkese(m);
   const aktifler = () => M.oyuncular.filter(o => !o.cikti);
@@ -42,14 +42,11 @@ const Motor = (() => {
     M.firavun = fno;
     M.faz = 'kosu'; M.t = -GERI_SAYIM;
     M.akt = D.bosAkt(); M.hazirT = {}; M.olu = {}; M.vardi = {}; M.kuyruk = []; M.duello = null; M.firavunCan = CAN; M.firavunGaleri = null;
-    M.istat = { oldurme: 0, nedenler: {} }; M.bitti = false;
+    M.istat = { oldurme: 0, nedenler: {} }; M.bitti = false; M.dogus = {}; M.olumSay = {}; M.vardiPuan = {};
     M.govde = {}; M.bot = {};
     const yerler = {};
     const kosucular = aktifler().filter(o => o.no !== fno);
-    kosucular.forEach((o, i) => {
-      const sx = -9 + (i % 4) * 2.2, sz = -2.7 + Math.floor(i / 4) * 2.7 + (Math.random() - 0.5) * 0.4;
-      yerler[o.no] = [sx, 0, sz, 0];
-    });
+    kosucular.forEach((o, i) => { yerler[o.no] = baslangicYeri(i); });
     yerler[fno] = [-8, D.GALERI_Y, D.GALERI_Z, 0];
     aktifler().forEach(o => {
       const [x, y, z, yaw] = yerler[o.no];
@@ -59,6 +56,8 @@ const Motor = (() => {
     yay({ tip: 'tur', tur: M.tur, toplamTur: M.toplamTur, firavun: fno, yerler, t: M.t, sure: M.ayar.sure, puan: puanlar(), bekleme: M.ayar.bekleme });
   }
 
+  function baslangicYeri(i) { return [-9 + (i % 4) * 2.2, 0, -2.7 + Math.floor(i / 4) * 2.7 + (Math.random() - 0.5) * 0.4, 0]; }
+  const bastanDogar = () => M.ayar.dogma === 'bastan';
   const hazir = id => M.t >= (M.hazirT[id] ?? -1e9);
   function tuzakBas(no, id) {
     if (M.faz !== 'kosu' || M.bitti || no !== M.firavun || M.t < 0 || M.duello) return;
@@ -73,18 +72,21 @@ const Motor = (() => {
     if (M.olu[no] || no === M.firavun || M.bitti) return;
     const g = M.govde[no];
     M.olu[no] = neden;
+    M.olumSay[no] = (M.olumSay[no] || 0) + 1;
+    if (bastanDogar() && neden !== 'cikti') { M.dogus[no] = M.t + DOGUS_SURE; delete M.vardi[no]; }
     M.istat.nedenler[neden] = (M.istat.nedenler[neden] || 0) + 1;
     const f = M.oyuncular[M.firavun];
     if (neden !== 'cikti' && f && !f.cikti) { f.puan += 1; M.istat.oldurme++; }
     M.kuyruk = M.kuyruk.filter(k => k !== no);
-    yay({ tip: 'oldu', no, neden, x: g ? yuvarla(g.x) : 0, y: g ? yuvarla(g.y) : 0, z: g ? yuvarla(g.z) : 0, puan: puanlar() });
+    yay({ tip: 'oldu', no, neden, x: g ? yuvarla(g.x) : 0, y: g ? yuvarla(g.y) : 0, z: g ? yuvarla(g.z) : 0, puan: puanlar(), dogus: M.dogus[no] !== undefined ? DOGUS_SURE : null });
+    if (bastanDogar()) return;   // baştan doğma modunda tur, süre bitene ya da Firavun ölene kadar sürer
     const kalan = aktifler().filter(o => o.no !== M.firavun && !M.olu[o.no]);
     if (!kalan.length) turBitti('firavun', 'hepsi');
   }
   function vardi(no) {
     if (M.vardi[no] || M.olu[no] || no === M.firavun || M.bitti) return;
     M.vardi[no] = M.t;
-    M.oyuncular[no].puan += 1;
+    if (!M.vardiPuan[no]) { M.vardiPuan[no] = true; M.oyuncular[no].puan += 1; }   // sona varma puanı turda bir kez
     M.kuyruk.push(no);
     yay({ tip: 'vardi', no, sira: Object.keys(M.vardi).length, puan: puanlar() });
     if (!M.duello) M.duelloBekle = M.t + 1.2;
@@ -142,6 +144,16 @@ const Motor = (() => {
     }
   }
 
+  function dogur(no) {
+    delete M.dogus[no]; delete M.olu[no];
+    const i = Object.keys(M.govde).indexOf(String(no));
+    const [x, y, z, yaw] = baslangicYeri(Math.max(0, i) % 8);
+    M.govde[no] = D.yeniGovde(x, y, z, yaw, 'kosucu');
+    if (M.bot[no]) { M.bot[no] = D.yeniKosucuBot(M.ayar.botZorluk, no); M.bot[no].durT = M.t + 0.3; }
+    M.sonGelen[no] = 'isinlandi';
+    yay({ tip: 'dogdu', no, p: [yuvarla(x), y, yuvarla(z), yaw] });
+  }
+
   function turBitti(kazanan, neden, kahraman) {
     if (M.bitti) return;
     M.bitti = true;
@@ -150,7 +162,7 @@ const Motor = (() => {
     if (kazanan === 'firavun' && f && !f.cikti) f.puan += 3;
     M.faz = 'turSonu'; M.fazBitis = M.t + TUR_SONU_SURE;
     const son = M.tur >= M.toplamTur || aktifler().length < 2;
-    yay({ tip: 'turSonu', kazanan, neden, kahraman, firavun: M.firavun, puan: puanlar(), oldurme: M.istat.oldurme, vardi: Object.keys(M.vardi).map(Number), olu: M.olu, son, kalan: TUR_SONU_SURE });
+    yay({ tip: 'turSonu', kazanan, neden, kahraman, firavun: M.firavun, puan: puanlar(), oldurme: M.istat.oldurme, vardi: Object.keys(M.vardiPuan).map(Number), olu: M.olu, olumSay: M.olumSay, son, kalan: TUR_SONU_SURE });
     M.sonMu = son;
   }
   function oyunSonu() {
@@ -237,6 +249,8 @@ const Motor = (() => {
       if (ono !== M.firavun && !M.olu[ono] && g.x > D.VARIS_X) vardi(ono);
       if (M.bitti) return;
     }
+    // baştan doğma
+    for (const no in M.dogus) if (M.t >= M.dogus[no] && !M.oyuncular[no].cikti) dogur(+no);
     // düello
     if (!M.duello && M.kuyruk.length && M.t >= (M.duelloBekle ?? 0)) duelloBasla();
     if (M.duello) {

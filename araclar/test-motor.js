@@ -1,9 +1,9 @@
 // Firarun - motor testi: sadece botlarla bütün bir oyun oynatır.
-// Çalıştır: node araclar/test-motor.js [botSayisi] [zorluk] [bekleme]
+// Çalıştır: node araclar/test-motor.js [botSayisi] [zorluk] [bekleme] [dogma: yok|bastan]
 const Motor = require('../motor.js');
 const D = require('../dunya.js');
 const n = +(process.argv[2] || 6);
-const ayar = { kez: 1, sure: 180, botZorluk: process.argv[3] || 'orta', bekleme: process.argv[4] || 'orta' };
+const ayar = { kez: 1, sure: 180, botZorluk: process.argv[3] || 'orta', bekleme: process.argv[4] || 'orta', dogma: process.argv[5] || 'yok' };
 let son = null, tur = null, ozet = { firavun: 0, kosucu: 0 };
 const olumler = {};
 Motor.baslat(Array.from({ length: n }, (_, i) => ({ id: 'b' + i, ad: 'Bot' + i, bot: true, renk: i })), ayar, {

@@ -5,7 +5,7 @@
 // =============================================================
 
 const Oyun = (() => {
-  const SURUM = 9;   // sw.js ONBELLEK numarasıyla aynı tut; oyuncular farklı sürümdeyse uyarı çıkar
+  const SURUM = 10;   // sw.js ONBELLEK numarasıyla aynı tut; oyuncular farklı sürümdeyse uyarı çıkar
   const $ = id => document.getElementById(id);
   const D = Dunya;
   const dokun = matchMedia('(pointer: coarse)').matches;
@@ -20,7 +20,7 @@ const Oyun = (() => {
 
   Sahne.kur($('sahne'));
   let mod = null;   // 'yerel' | 'ev' | 'misafir'
-  const ayarVarsayilan = () => ({ kez: 1, sure: 180, bekleme: 'orta', botZorluk: 'orta' });
+  const ayarVarsayilan = () => ({ kez: 1, sure: 180, bekleme: 'orta', botZorluk: 'orta', dogma: 'yok' });
   let lobi = { ayar: ayarVarsayilan(), botlar: [] };
   try { const k = JSON.parse(localStorage.getItem('ft.ayar') || 'null'); if (k) lobi.ayar = { ...lobi.ayar, ...k }; } catch (e) { }
   let O = null;   // oyun durumu
@@ -79,7 +79,7 @@ const Oyun = (() => {
   Ag.on('evKoptu', () => menuyeDon('Oda sahibiyle bağlantı koptu.'));
 
   // ---------- Bekleme odası ----------
-  const SECIMLER = [['secKez', 'kez', Number], ['secSure', 'sure', Number], ['secBekleme', 'bekleme', String], ['secZorluk', 'botZorluk', String]];
+  const SECIMLER = [['secDogma', 'dogma', String], ['secKez', 'kez', Number], ['secSure', 'sure', Number], ['secBekleme', 'bekleme', String], ['secZorluk', 'botZorluk', String]];
   function botEkle(sessiz) {
     if (tumOyuncular().length >= AZAMI) { if (!sessiz) $('lobiDurum').textContent = `En fazla ${AZAMI} oyuncu.`; return; }
     const kullanilan = new Set(lobi.botlar.map(b => b.ad));
@@ -101,7 +101,7 @@ const Oyun = (() => {
     $('satirZorluk').classList.toggle('gizli', !lobi.botlar.length);
     $('botEkleBtn').classList.toggle('gizli', !yonetici() || L.length >= AZAMI);
     const a = lobi.ayar;
-    $('ayarOzet').textContent = `${L.length} oyuncu · ${L.length * a.kez} tur · her tur ${a.sure / 60} dk`;
+    $('ayarOzet').textContent = `${L.length} oyuncu · ${L.length * a.kez} tur · her tur ${a.sure / 60} dk · ${a.dogma === 'bastan' ? '🔁 ölen baştan doğar' : '🪦 ölen turu izler'}`;
     $('baslaBtn').classList.toggle('gizli', !yonetici());
     if (yonetici()) $('lobiDurum').textContent = L.length < 2 ? (mod === 'yerel' ? 'En az 1 bot ekle.' : 'En az 2 oyuncu gerekli. Oda kodunu gönder ya da bot ekle.') : 'Hazır olunca oyunu başlat.';
     else if (!/Sürümün/.test($('lobiDurum').textContent)) $('lobiDurum').textContent = 'Oda sahibi oyunu başlatacak…';
@@ -307,7 +307,7 @@ const Oyun = (() => {
         if (c) { c.K.g.visible = false; c.et.visible = false; Sahne.ruh(c.s.x, c.s.y, c.s.z, m.neden); }
         Ses.olum(m.neden, c ? sesGucu(c.s.x, c.s.y, c.s.z) : 0.5);
         akis(`💀 ${ad(m.no)} ${NEDEN[m.neden] || ''}`, m.no === O.benNo ? 'kotu' : '');
-        if (m.no === O.benNo) { O.olumYeri = c ? { x: c.s.x, y: c.s.y, z: c.s.z } : null; O.ben = null; kontrolGoster(false); $('rolYazi').classList.add('gizli'); $('hizGosterge').classList.add('gizli'); sonHizGoster = false; buyuk('💀 ÖLDÜN!', NEDEN[m.neden] || '', 2200); setTimeout(() => { if (O && !O.ben) izlemeyeBasla(); }, 1800); }
+        if (m.no === O.benNo) { O.olumYeri = c ? { x: c.s.x, y: c.s.y, z: c.s.z } : null; O.ben = null; kontrolGoster(false); $('rolYazi').classList.add('gizli'); $('hizGosterge').classList.add('gizli'); sonHizGoster = false; buyuk('💀 ÖLDÜN!', m.dogus ? `${NEDEN[m.neden] || ''} · ${m.dogus} saniye sonra baştan doğacaksın` : (NEDEN[m.neden] || ''), 2200); if (!m.dogus) setTimeout(() => { if (O && !O.ben) izlemeyeBasla(); }, 1800); }
         else if (O.benNo === O.firavun && m.neden !== 'cikti') buyuk('+1', `${ad(m.no)} ${NEDEN[m.neden] || ''}`, 1100);
         puanCiz();
         break;
@@ -353,6 +353,7 @@ const Oyun = (() => {
         if (m.f === O.benNo && O.ben) { Object.assign(O.ben, { x: m.p[0], y: m.p[1], z: m.p[2], vx: 0, vy: 0, vz: 0 }); akis('🪬 Galeriye döndün. Tuzaklara devam!', 'iyi'); }
         break;
       }
+      case 'dogdu': dogdu(m); break;
       case 'turSonu': turSonu(m); break;
       case 'cikti': {
         O.cikti.add(m.no); akis(`🚪 ${ad(m.no)} oyundan çıktı`, 'kotu');
@@ -361,6 +362,22 @@ const Oyun = (() => {
       }
       case 'son': oyunSonu(m); break;
     }
+  }
+  // baştan doğma modu: ölen koşucu başlangıç odasında yeniden belirir
+  function dogdu(m) {
+    O.olu.delete(m.no); O.vardi.delete(m.no);
+    const c = O.govdeler.get(m.no); if (!c) return;
+    const [x, y, z, yaw] = m.p;
+    Object.assign(c.s, { x, y, z, yaw }); c.hedef = { x, y, z, yaw, vx: 0, vz: 0, anim: 1, zaman: performance.now() };
+    c.K.g.visible = true; c.et.visible = m.no !== O.benNo;
+    Sahne.toz(x, 0.2, z, 20, 0xffe0a0, 2); Sahne.kivilcim(x, 1, z, 14, 0xfff0a0);
+    if (m.no === O.benNo) {
+      O.ben = D.yeniGovde(x, y, z, yaw, 'kosucu'); O.oldumGitti = false; O.vardimGitti = false; O.olumYeri = null; O.izle = null;
+      kam.yaw = 0; kam.pitch = 0.22;
+      $('izlePanel').classList.add('gizli'); $('rolYazi').classList.remove('gizli'); kontrolGoster(true);
+      buyuk('🔁 YENİDEN DOĞDUN!', 'Koş!', 1400); Ses.basla();
+    }
+    puanCiz();
   }
   function tuzakSesi(tz, k) {
     switch (tz.tur) {
@@ -407,7 +424,8 @@ const Oyun = (() => {
     $('turTablo').innerHTML = '<tr><th>Oyuncu</th><th>Bu tur</th><th>Toplam</th></tr>' + sira.map(no => {
       const p = O.oyuncular[no];
       const durum = no === m.firavun ? '🪬 Firavun' : m.kahraman === no ? '⚔️ Firavun’u yendi' : m.vardi.includes(no) ? '🏁 Vardı' : m.olu[no] ? (NEDEN[m.olu[no]] || '💀').split(' ')[0] + ' öldü' : O.cikti.has(no) ? '🚪' : '🙂 Hayatta';
-      return `<tr class="${no === O.benNo ? 'ben' : ''}"><td class="ad" style="--r:${renkHex(p.renk)}">${p.bot ? '🤖 ' : ''}${kacis(p.ad)}</td><td>${durum}</td><td><b>${O.puan[no]}</b></td></tr>`;
+      const ekOlum = O.ayar.dogma === 'bastan' && no !== m.firavun && m.olumSay?.[no] ? ` · 💀×${m.olumSay[no]}` : '';
+      return `<tr class="${no === O.benNo ? 'ben' : ''}"><td class="ad" style="--r:${renkHex(p.renk)}">${p.bot ? '🤖 ' : ''}${kacis(p.ad)}</td><td>${durum}${ekOlum}</td><td><b>${O.puan[no]}</b></td></tr>`;
     }).join('');
     $('turSonuAlt').textContent = m.son ? 'Oyun bitiyor…' : 'Sonraki tur birazdan… Sıradaki Firavun hazırlansın!';
     ekranGoster('turSonu');
