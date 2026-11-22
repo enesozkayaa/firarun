@@ -7,7 +7,7 @@
 
 const Dunya = (() => {
   const R = 0.38, BOY = 1.8, EGIK_BOY = 1.15, HIZ = 7, FIR_HIZ = 9, G = 24, ZIPLA = 8.4;
-  const GALERI_Y = 1.2, GALERI_Z = -6.4;
+  const GALERI_Y = 1.2, GALERI_Z = -7.6;
   const VARIS_X = 243.5;
   const LAV_Y = -1.2;
   const KAYA_R = 3.7;
@@ -120,13 +120,13 @@ const Dunya = (() => {
     let x0 = -14;
     NISLER.forEach(a => { K(x0, a, -10, 12, 4, 6.8, 'duvar'); K(a, a + 2.5, -10, 12, 6.2, 6.8, 'duvar'); K(a, a + 2.5, 3.2, 12, 4, 6.2, 'duvar'); x0 = a + 2.5; });
     K(x0, 249, -10, 12, 4, 6.8, 'duvar');
-    K(-14.6, -14, -10, 13, -8.6, 6.8, 'duvar');                 // arka duvar
-    K(-14, 249, 12, 13, -8.6, 6.8, 'tavan');                     // tavan
+    K(-14.6, -14, -10, 13, -12.85, 6.8, 'duvar');                 // arka duvar
+    K(-14, 249, 12, 13, -12.85, 6.8, 'tavan');                     // tavan
     // galeri
-    K(-14, 246, 0.6, 1.2, -8, -4.25, 'galeri');                   // Firavun'un kabininin zemini
-    K(-14, 249, -10, 12, -8.6, -8, 'duvar');                    // kabinin arka duvarı
+    K(-14, 246, 0.6, 1.2, -12.25, -4.25, 'galeri');                   // Firavun'un kabininin zemini
+    K(-14, 249, -10, 12, -12.85, -12.25, 'duvar');                    // kabinin arka duvarı
     K(-14, 249, 1.2, 12, -4.25, -4.0, 'cam');                    // cam: herkes görür, kimse geçemez
-    K(246, 246.6, 1.2, 12, -8, -4.25, 'duvar');
+    K(246, 246.6, 1.2, 12, -12.25, -4.25, 'duvar');
     // bekleme salonu kapısı (parmaklık) ve arena duvarları
     K(248.2, 248.8, 0, 7, -4, 4, 'kapi');
     K(249, 249.6, -1, 14, -14.6, -4, 'duvar'); K(249, 249.6, -1, 14, 4, 14.6, 'duvar'); K(249, 249.6, 7, 14, -4, 4, 'duvar');
@@ -285,6 +285,16 @@ const Dunya = (() => {
       else if (bosMu(p.x, p.y, p.z, BOY, t, akt)) p.boy = BOY;
     }
     p.egik = p.boy < BOY;
+  }
+  // İki gövde iç içe girmesin (düello): p, diğerinin (o) dışına itilir. Duvara itmemek için kutu kontrolü yapılır.
+  function govdeIt(p, o, t, akt) {
+    if (!o || Math.abs(p.y - o.y) > 1.6) return;
+    const dx = p.x - o.x, dz = p.z - o.z, d = Math.hypot(dx, dz), en = R * 2 + 0.05;
+    if (d >= en) return;
+    const nx = d > 1e-4 ? dx / d : 1, nz = d > 1e-4 ? dz / d : 0, k = en - d;
+    const yx = p.x + nx * k, yz = p.z + nz * k;
+    if (bosMu(yx, p.y + 0.05, yz, (p.boy || BOY) - 0.1, t, akt)) { p.x = yx; p.z = yz; }
+    const vn = p.vx * nx + p.vz * nz; if (vn < 0) { p.vx -= vn * nx; p.vz -= vn * nz; }
   }
   // g: { ileri, yan (-1..1), zipla, egil, yaw }  → olay listesi döner
   function adim(p, g, t, dt, akt) {
@@ -569,7 +579,7 @@ const Dunya = (() => {
     TUZAKLAR, TUR_SURE, dolmaSuresi, KUTULAR, DINAMIK, TASLAR, TAS_YARI, SUTUNLAR, SUTUN_Y, NISLER, LAV_CUKUR, CUKURLAR, TAVANLAR, TAVAN_UST,
     BALTALAR, PLATFORMLAR, LAZER_N, LAV_TABAN, LAV_TEPE, YOL,
     faz, dikenBoy, cokmeAci, cokmeAcik, batanY, batanSalla, tasY, tavanAlt, kayaPos, lavY, kayganAktif, lazerX, alevAktif, alevUyari, baltaAci, baltaUc, platMerkez,
-    yakinKutular, zeminY, isinKes, olumKontrol, zeminEtkisi, yeniGovde, adim,
+    yakinKutular, zeminY, isinKes, olumKontrol, govdeIt, zeminEtkisi, yeniGovde, adim,
     yeniKosucuBot, botKosucu, yeniFiravunBot, botFiravun, botDuello, clamp, lerp,
     bosAkt: () => ({ t: {}, n: {} }),
   };

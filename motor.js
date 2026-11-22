@@ -238,6 +238,7 @@ const Motor = (() => {
           gi = { ileri: g.x < 246.5 ? 0.4 : 0, yan: Math.sin(M.t + ono) * 0.3, yaw: 0 };
         } else gi = D.botKosucu(b, g, ts, M.akt, { f: M.duello ? null : M.govde[M.firavun], hazir });
         const ol = D.adim(g, gi, ts, h, M.akt);
+        if (duelloda) D.govdeIt(g, M.govde[ono === M.firavun ? M.duello.k : M.firavun], ts, M.akt);
         g.anim = (g.yerde ? 1 : 0) | (Math.hypot(g.vx, g.vz) > 1 ? 2 : 0);
         if (ono !== M.firavun && !duelloda) {
           const neden = D.olumKontrol(g, ts, M.akt);

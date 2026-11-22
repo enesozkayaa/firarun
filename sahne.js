@@ -206,7 +206,7 @@ const Sahne = (() => {
     parilti.material.map.repeat.set(20, 1); parilti.position.set(117.5, 6.6, -4.1); g.add(parilti);    // meşaleler
     for (let x = -10; x < 248; x += 9) {
       meşaleEkle(g, x + 4.5, 3.4, 3.85, -1);
-      meşaleEkle(g, x + 1, 4.2, -7.85, 1);
+      meşaleEkle(g, x + 1, 4.2, -12.1, 1);
     }
     [[252, 4, -13.6, 1], [252, 4, 13.6, -1], [266, 4, -13.6, 1], [266, 4, 13.6, -1], [280.6, 4, -6, 0], [280.6, 4, 6, 0]].forEach(([x, y, z, s]) => meşaleEkle(g, x, y, z, s));
     for (let i = 0; i < 8; i++) { const l = new T.PointLight(0xff9a40, 0, 13, 1.7); scene.add(l); isikHavuzu.push(l); }

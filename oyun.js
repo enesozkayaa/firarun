@@ -5,7 +5,7 @@
 // =============================================================
 
 const Oyun = (() => {
-  const SURUM = 10;   // sw.js ONBELLEK numarasıyla aynı tut; oyuncular farklı sürümdeyse uyarı çıkar
+  const SURUM = 11;   // sw.js ONBELLEK numarasıyla aynı tut; oyuncular farklı sürümdeyse uyarı çıkar
   const $ = id => document.getElementById(id);
   const D = Dunya;
   const dokun = matchMedia('(pointer: coarse)').matches;
@@ -571,6 +571,8 @@ const Oyun = (() => {
         if (neden) { O.oldumGitti = true; eve({ tip: 'oldum', neden }); break; }
       }
       if (p.rol === 'firavun' && O.duello && p.y < -2) p.y = 0;
+      // düelloda rakibin içinden geçilmez
+      if (O.duello && (O.benNo === O.duello.k || O.benNo === O.duello.f)) { const rk = O.govdeler.get(O.benNo === O.duello.k ? O.duello.f : O.duello.k); if (rk) D.govdeIt(p, rk.s, ts, O.akt); }
     }
     if (p.rol === 'kosucu' && !O.vardimGitti && p.x > D.VARIS_X) { O.vardimGitti = true; eve({ tip: 'vardim' }); }
     // adım sesi + toz
